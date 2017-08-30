@@ -1,0 +1,32 @@
+readme
+
+
+
+//工程移植---修改说明
+1.添加nRF_Drivers后，必须修改nrf_drv_config.h中的相应端口define
+如uart使能
+twi(iic)使能
+
+2.要使用pstorage进行内部flash的存储，必须修改nRF_Drivers下的pstorage_platform.h的
+43行
+#define PSTORAGE_NUM_OF_PAGES       1
+修改为
+#define PSTORAGE_NUM_OF_PAGES       3  
+
+3使用device_manager后，相应的修改nRF_BLE下的device_manager_cnfg.h的
+78行
+#define DM_GATT_CCCD_COUNT               2
+修改为
+#define DM_GATT_CCCD_COUNT               4
+
+92行
+#define DEVICE_MANAGER_APP_CONTEXT_SIZE    0
+修改为
+#define DEVICE_MANAGER_APP_CONTEXT_SIZE    16
+
+
+-----2017.8.23
+完成增加配对密码，未完成的是uart不能指定相应的pin28 29
+
+----2017.8.30
+完成蓝牙串口和uart的初始化，同时完成部分指纹模块的调试
