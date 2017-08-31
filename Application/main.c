@@ -130,6 +130,9 @@ int main(void)
 	set_default_params();
 	//初始化灯，拉高，灭
 	leds_init();
+//	led test
+//	leds_on(LED_1,5);
+//	leds_on(LED_11,5);
 	
 	//初始化电机
 	moto_init();

@@ -2,8 +2,8 @@
 *	触摸按键分布
 *	T8---1			T9---2			T10--3
 *	T7---4			T12--5		T11--6
-*	T5---7			T1---8			T2---9
-*	T6---*			T4---0			T3---#
+*	T6---7			T1---8			T2---9
+*	T5---*			T4---0			T3---#
 *(#就是开锁键)
 **************************************************/
 
@@ -227,10 +227,10 @@ uint8_t tsm12_key_read(void)
 		switch(*(p + 1))
 		{
 			case 0x03:
-				key_value = '7';
+				key_value = 'a';
 				break;
 			case 0x0c:
-				key_value = 'a';
+				key_value = '7';
 				break;
 			case 0x30:
 				key_value = '4';
