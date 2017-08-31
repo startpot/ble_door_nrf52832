@@ -30,6 +30,10 @@
 #include <stdint.h>
 
 
+//上电后，系统发送准备好的码
+#define READY_CODE		0x55
+
+
 //包头、地址
 #define	FIG_START			0x1B
 #define	FIG_ADDER			0xFF
@@ -41,21 +45,23 @@
 #define	FIG_CMD_DELETE				0x1C
 
 //应答包的数据位置
-#define FIG_R_CMD_CODE_SITE			1
-#define FIG_R_RESULT_CODE_SITE 	2
-#define FIG_R_PARAM_LEN_SITE			3
+#define FIG_R_CMD_CODE_SITE			1  //bit1
+#define FIG_R_RESULT_CODE_SITE 	2  //bit2
+#define FIG_R_PARAM_LEN_SITE			3  //bit3
 
 //正确命令包的应答结果码
-#define	FIG_RESULT_EXE			0x00
-#define	FIG_RESULT_FINISH_TRUE			0x01
-#define	FIG_RESULT_FINISH_FALSE		0x02
-#define	FIG_RESULT_FIG_MOVE				0x05
-#define	FIG_RESULT_FIG_TOUCH			0x06
+#define	FIG_R_EXE			0x00
+
+#define	FIG_R_FINISH_TRUE			0x01
+#define	FIG_R_FINISH_FALSE		0x02
+
+#define	FIG_R_FIG_MOVE				0x05
+#define	FIG_R_FIG_TOUCH			0x06
 
 //错误命令包的应答结果码
-#define	FIG_RESULT_COM_WRONG		0x40
-#define	FIG_RESULT_PARA_WRONG		0x41
-#define	FIG_RESULT_SUM_WRONG		0x42
+#define	FIG_R_CMD_WRONG		0x40
+#define	FIG_R_PARAM_WRONG	0x41
+#define	FIG_R_SUM_WRONG		0x42
 
 
 extern bool		fig_status;
@@ -65,5 +71,6 @@ extern bool		is_autoenroll;
 extern uint16_t	fig_param_first ;
 extern uint16_t	fig_param_second ;
 
+void fig_reply_check(void);
 
 #endif		//FM260B_H__
