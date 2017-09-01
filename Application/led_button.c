@@ -294,101 +294,36 @@ clear_keys_input:
 *如果是开锁键(b)进行密码校验
 *in：	express_value	按下的键值
 ******************************************/
+
 static void check_key_express(char express_value)
 {
 
-	switch(express_value)
+	static uint8_t board_leds[LEDS_NUMBER-1] =	{LED_1, LED_3, LED_5,\
+																						 LED_7, LED_10, LED_11,\
+																						 LED_2, LED_4, LED_6,\
+																						 LED_8, LED_9, LED_12};
+	static char board_buttons[LEDS_NUMBER-1] =	{'1', '2', '3',\
+																						  '4', '5', '6',\
+																						  '7', '8', '9',\
+																						   'a','0','b'};
+	
+	//判断按键，亮相应的灯
+	for(int i=0; i< (LEDS_NUMBER-1); i++)
 	{
-		//判断按键，亮点0.5s
-		case '0'://按下0键,亮LED9
-			leds_on(LED_9, LED_LIGHT_TIME);
-#if defined(BLE_DOOR_DEBUG)
-			printf("button 0 pressed\r\n");
-#endif
-			write_key_expressed();
-			break;
-		case '1'://按下1键,亮LED1
-			leds_on(LED_1, LED_LIGHT_TIME);
-#if defined(BLE_DOOR_DEBUG)
-			printf("button 1 pressed\r\n");
-#endif
-			write_key_expressed();
-			break;
-		case '2'://按下2键,亮LED3
-			leds_on(LED_3, LED_LIGHT_TIME);
-#if defined(BLE_DOOR_DEBUG)
-			printf("button 2 pressed\r\n");
-#endif
-			write_key_expressed();
-			break;
-		case '3'://按下3键,亮LED5
-			leds_on(LED_5, LED_LIGHT_TIME);
-#if defined(BLE_DOOR_DEBUG)
-			printf("button 3 pressed\r\n");
-#endif
-			write_key_expressed();
-			break;
-		case '4'://按下4键,亮LED7
-			leds_on(LED_7, LED_LIGHT_TIME);
-#if defined(BLE_DOOR_DEBUG)
-			printf("button 4 pressed\r\n");
-#endif
-			write_key_expressed();
-			break;
-		case '5'://按下5键,亮LED10
-			leds_on(LED_10, LED_LIGHT_TIME);
-#if defined(BLE_DOOR_DEBUG)
-			printf("button 5 pressed\r\n");
-#endif
-			write_key_expressed();
-			break;
-		case '6'://按下6键,亮LED11
-			leds_on(LED_11, LED_LIGHT_TIME);
-#if defined(BLE_DOOR_DEBUG)
-			printf("button 6 pressed\r\n");
-#endif
-			write_key_expressed();
-			break;
-		case '7'://按下7键,亮LED2
-			leds_on(LED_2, LED_LIGHT_TIME);
-#if defined(BLE_DOOR_DEBUG)
-			printf("button 7 pressed\r\n");
-#endif
-			write_key_expressed();
-			break;
-		case '8'://按下8键,亮LED4
-			leds_on(LED_4, LED_LIGHT_TIME);
-#if defined(BLE_DOOR_DEBUG)
-			printf("button 8 pressed\r\n");
-#endif
-			write_key_expressed();
-			break;
-		case '9'://按下9键,亮LED6
-			leds_on(LED_6, LED_LIGHT_TIME);
-#if defined(BLE_DOOR_DEBUG)
-			printf("button 9 pressed\r\n");
-#endif
-			write_key_expressed();
-			break;
-		case 'a'://按下*键,亮LED8
-			leds_on(LED_8, LED_LIGHT_TIME);
-#if defined(BLE_DOOR_DEBUG)
-			printf("button * pressed\r\n");
-#endif
-		//	write_key_expressed();
-			break;
-		case 'b'://按下 #(开锁) 键,亮LED12
-			leds_on(LED_12, LED_LIGHT_TIME);
-#if defined(BLE_DOOR_DEBUG)
-			printf("button open pressed\r\n");
-#endif
-			check_keys();
-			break;
-		default:
-				
-			break;
+		if(board_buttons[i] == express_value)
+		{
+			leds_on(board_leds[i], LED_LIGHT_TIME);
+		}
 	}
-		
+	//如果按键是'b'，检验所有按键，其他键则记录下来
+	if(express_value == 'b')
+	{
+		check_keys();
+	}
+	else
+	{
+		write_key_expressed();
+	}
 }
 
 /**************************************************************

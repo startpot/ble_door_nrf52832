@@ -1,16 +1,16 @@
-/** *****************************
-*--------------------------------
+/** *****************************************************
+*-----------------------------------------------------------------
 * bluetooth-door
-* ------------------------------- 
-*	12 LEDs ; iic(sda,scl,en,int)
-*--------------------------------
-*	2-wire moto ; 1-wire beer
-*--------------------------------
-*	ble-softdevice-s130
-*--------------------------------
-*	nrf51822-P.x	define in
+* ------------------------------- --------------------------------
+*	13 LEDs ; iic(sda,scl,en,int)
+*-----------------------------------------------------------------
+*	2-wire moto ; 1-wire beer;uart(fig)
+*-----------------------------------------------------------------
+*	ble-softdevice-s132_nrf52_2.0.0-7.alpha
+*-----------------------------------------------------------------
+*	nrf52832-P.x	define in
 *	custom_board.h
-********************************/
+********************************************************/
 
 #include <stdio.h>
 #include <stdint.h>
@@ -38,7 +38,6 @@
 #include "device_manager.h"
 #include "app_trace.h"
 #include "app_util_platform.h"
-
 #include "uicr_config.h"
 
 #include "led_button.h"
@@ -144,7 +143,26 @@ int main(void)
 	rtc_init();
 	//初始化触摸屏和指纹的中断函数
 	touch_finger_int_init();
-
+	
+	//如果配置了mac，则使用配置的mac
+	if(mac[0] =='w')
+	{
+		memset(addr.addr, 0, 6);
+		//拷贝设置的mac
+		memcpy(addr.addr, &mac[2], 6);
+		err_code = sd_ble_gap_address_set(BLE_GAP_ADDR_CYCLE_MODE_NONE,&addr);
+		if(err_code == NRF_SUCCESS)
+		{
+#if defined(BLE_DOOR_DEBUG)
+			printf(" use mac setted by user:");
+			for(int i=0; i<6;i++)
+			{
+				printf("%x ",mac[3+i]);
+			}
+	printf("\r\n");
+#endif
+		}		
+	}
 
 
 	//添加配对密码
