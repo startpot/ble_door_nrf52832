@@ -9,35 +9,35 @@
 #include "ble_init.h"
 #include "set_params.h"
 
-char	super_key[SUPER_KEY_LENGTH];
+char										super_key[SUPER_KEY_LENGTH];
 
+pstorage_handle_t				block_id_flash_store;
 
-pstorage_handle_t	block_id_flash_store;
+pstorage_handle_t				block_id_default_params;
+pstorage_handle_t				block_id_mac;
+pstorage_handle_t				block_id_super_key;
+pstorage_handle_t				block_id_seed;
+pstorage_handle_t				block_id_device_name;
+pstorage_handle_t				block_id_key_store;
+pstorage_handle_t				block_id_record;
 
-pstorage_handle_t	block_id_default_params;
-pstorage_handle_t	block_id_mac;
-pstorage_handle_t	block_id_super_key;
-pstorage_handle_t	block_id_seed;
-pstorage_handle_t	block_id_device_name;
-pstorage_handle_t	block_id_key_store;
-pstorage_handle_t	block_id_record;
+struct key_store_length_struct					key_store_length;
+struct record_length_struct						record_length;
 
-struct key_store_length_struct		key_store_length;
-struct record_length_struct			record_length;
+bool 			key_store_length_setted;
+bool 			record_length_setted;
 
-bool key_store_length_setted;
-bool record_length_setted;
+pstorage_handle_t				block_id_write;
+pstorage_handle_t				block_id_read;
 
-pstorage_handle_t	block_id_write;
-pstorage_handle_t	block_id_read;
-uint8_t	flash_write_data[BLOCK_STORE_SIZE];
-uint8_t	flash_read_data[BLOCK_STORE_SIZE];
-uint8_t	flash_read_key_store_data[BLOCK_STORE_SIZE];
-uint8_t	flash_write_key_store_data[BLOCK_STORE_SIZE];
-uint8_t	flash_read_record_data[BLOCK_STORE_SIZE];
-uint8_t	flash_write_record_data[BLOCK_STORE_SIZE];
+uint8_t				flash_write_data[BLOCK_STORE_SIZE];
+uint8_t				flash_read_data[BLOCK_STORE_SIZE];
+uint8_t				flash_read_key_store_data[BLOCK_STORE_SIZE];
+uint8_t				flash_write_key_store_data[BLOCK_STORE_SIZE];
+uint8_t				flash_read_record_data[BLOCK_STORE_SIZE];
+uint8_t				flash_write_record_data[BLOCK_STORE_SIZE];
 
-uint8_t	flash_read_temp[BLOCK_STORE_SIZE];
+uint8_t				flash_read_temp[BLOCK_STORE_SIZE];
 
 /************************************************************************
 *flash操作的回调函数
@@ -89,7 +89,6 @@ void flash_init(void)
 	//初始化标志量
 	key_store_length_setted =false;
 	record_length_setted = false;
-	
 	
 	//	pstorage_init(); //初始化flash操作,在device_manager_init中初始化了，这里就不用了
 	
@@ -169,7 +168,6 @@ void flash_init(void)
 	printf("flash init success \r\n");
 	}
 #endif
-
 }
 
 /**********************************************************

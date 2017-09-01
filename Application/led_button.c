@@ -30,28 +30,27 @@
 #include "operate_code.h"
 #include "fm260b.h"
 
-#define APP_GPIOTE_MAX_USERS		1
+#define APP_GPIOTE_MAX_USERS				1
 
-app_gpiote_user_id_t	m_app_gpiote_id;
+app_gpiote_user_id_t								m_app_gpiote_id;
 
-char key_express_value;
+char			key_express_value;
 
 //输入按键值，当作输入密码
-char key_input[KEY_NUMBER];
-uint8_t key_input_site;
+char			key_input[KEY_NUMBER];
+uint8_t		key_input_site;
 
 //输入的密码的时间
-struct tm key_input_time_tm;
-time_t key_input_time_t;
+struct			tm key_input_time_tm;
+time_t			key_input_time_t;
 
-struct key_store_struct key_store_check;
+struct key_store_struct				key_store_check;
 
 //存储在flash的密码
-uint8_t flash_key_store[BLOCK_STORE_SIZE];
+uint8_t			flash_key_store[BLOCK_STORE_SIZE];
 
 ///开锁记录全局变量
-struct door_open_record		open_record_now;
-
+struct door_open_record			open_record_now;
 
 /***********************************************
  *初始化LED pins
@@ -74,7 +73,6 @@ void leds_init(void)
 #if defined(BLE_DOOR_DEBUG)	
 	printf("all leds not lit\r\n");
 #endif
-
 }
 
 /***********************************************

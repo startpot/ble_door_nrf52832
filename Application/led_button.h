@@ -9,23 +9,23 @@
 
 #include "inter_flash.h"
 
-extern char key_express_value;
+extern char			key_express_value;
 
 #define KEY_NUMBER		12
-extern char 	key_input[KEY_NUMBER];
-extern uint8_t 	key_input_site;
+extern char			key_input[KEY_NUMBER];
+extern uint8_t		key_input_site;
 
 //输入的密码的时间
-extern struct tm key_input_time_tm;
-extern time_t key_input_time_t;
+extern struct tm			key_input_time_tm;
+extern time_t				key_input_time_t;
 
-extern struct key_store_struct key_store_check;
+extern struct key_store_struct			key_store_check;
 
 
 //存储在flash的密码
-extern uint8_t flash_key_store[BLOCK_STORE_SIZE];
+extern uint8_t						flash_key_store[BLOCK_STORE_SIZE];
 
-extern struct door_open_record		open_record_now;
+extern struct door_open_record				open_record_now;
 
 
 #define BUTTON_DETECTION_DELAY          APP_TIMER_TICKS(50, APP_TIMER_PRESCALER)

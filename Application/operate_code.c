@@ -18,24 +18,24 @@
 #include "led_button.h"
 #include "fm260b.h"
 
-struct key_store_struct	key_store_struct_set;
+struct key_store_struct				key_store_struct_set;
 
-uint8_t data_array_send[BLE_NUS_MAX_DATA_LEN];//20位
-uint32_t data_send_length = 0;
+uint8_t				data_array_send[BLE_NUS_MAX_DATA_LEN];//20位
+uint32_t				data_send_length = 0;
 
-struct door_open_record door_open_record_get;
+struct door_open_record				door_open_record_get;
 struct tm 	time_record;//读出记录的时间
 time_t 		time_record_t;//读出的时间的int
 struct tm 	time_record_compare;//要对比的时间
 time_t 		time_record_compare_t;//要对比的时间的int
 
 //与获取和设置时间相关的变量
-struct tm time_set;
-struct tm time_get;
-time_t time_get_t;
+struct tm					time_set;
+struct tm					time_get;
+time_t						time_get_t;
 
-uint32_t record_length_get;
-uint32_t key_store_length_get;
+uint32_t					record_length_get;
+uint32_t					key_store_length_get;
 
 
 
@@ -44,8 +44,8 @@ bool	exe_result = false;
 bool	is_autoenroll = false;
 
 //与指纹模块有关的参数
-uint16_t	fig_param_first = 0x0000;
-uint16_t	fig_param_second =0x0000;
+uint16_t				fig_param_first = 0x0000;
+uint16_t				fig_param_second =0x0000;
 
 /***********************************
 *	设置开锁密码命令

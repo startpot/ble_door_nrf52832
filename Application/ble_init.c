@@ -34,23 +34,25 @@
 dm_application_instance_t 				m_app_handle;
 dm_handle_t											m_dm_handle;
 
-ble_uuid_t                       	m_adv_uuids[] = {{BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}};
+ble_uuid_t												m_adv_uuids[] = {{BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}};
 
+ble_nus_t												m_nus;//ble 服务注册的nus服务
+uint16_t													m_conn_handle = BLE_CONN_HANDLE_INVALID;
 
-ble_nus_t                        	m_nus;//ble 服务注册的nus服务
-uint16_t                         		m_conn_handle = BLE_CONN_HANDLE_INVALID;
-
-uint8_t mac[8];//第一位：标志位，第二位：长度
-uint8_t device_name[20];//[0]标记位0x77，[1]长度[2...]名字
+uint8_t					mac[8];//第一位：标志位，第二位：长度
+uint8_t					device_name[20];//[0]标记位0x77，[1]长度[2...]名字
 
 //自定义的nus服务中data_handle函数中暂存的数据，需要交给check命令
-bool    			operate_code_setted = false;
-uint8_t			nus_data_array[BLE_NUS_MAX_DATA_LEN];
-uint16_t  		nus_data_array_length;
+bool						operate_code_setted = false;
+uint8_t					nus_data_array[BLE_NUS_MAX_DATA_LEN];
+uint16_t					nus_data_array_length;
 
 //指纹模块发送给蓝牙芯片的数据
-uint8_t						fig_send_data_array[BLE_NUS_MAX_DATA_LEN];
-uint16_t						fig_send_data_array_length = 0;
+uint8_t					fig_send_data_array[BLE_NUS_MAX_DATA_LEN];
+uint16_t					fig_send_data_array_length = 0;
+
+
+
 
 void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
 {
@@ -94,7 +96,9 @@ static void ad_repeat_timeout_handler(void *p_context)
 	advertising_init();
 }
 
-
+/*********************************
+*初始化timers
+*********************************/
 void timers_init(void)
 {
 	 uint32_t err_code;
@@ -152,11 +156,9 @@ void gap_params_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
-
-/**
+/*************************************************
 *蓝牙串口服务的处理函数
- */
-/**@snippet [Handling the data received over BLE] */
+ *************************************************/
 static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data, uint16_t length)
 {
 	/*
@@ -177,9 +179,9 @@ static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data, uint16_t lengt
 //	ble_nus_string_send(&m_nus, nus_data_array, nus_data_array_length);
 	
 }
-/**
+/******************************************************
 *芯片蓝牙服务初始化，初始化一个串口服务
- */
+ *****************************************************/
 void services_init(void)
 {
     uint32_t       err_code;
@@ -193,10 +195,9 @@ void services_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
-
-/*
+/********************************************
 *连接参数事件，固定样式
- */
+ *******************************************/
 static void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
 {
     uint32_t err_code;
@@ -208,19 +209,15 @@ static void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
     }
 }
 
-
-/**@brief Function for handling errors from the Connection Parameters module.
- *
- * @param[in] nrf_error  Error code containing information about what went wrong.
- */
 static void conn_params_error_handler(uint32_t nrf_error)
 {
     APP_ERROR_HANDLER(nrf_error);
 }
 
 
-/**@brief Function for initializing the Connection Parameters module.
- */
+/*********************************
+*连接参数初始化 
+*********************************/
 void conn_params_init(void)
 {
     uint32_t               err_code;
@@ -241,11 +238,9 @@ void conn_params_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
-
-/**@brief Function for putting the chip into sleep mode.
- *
- * @note This function will not return.
- */
+/***********************************
+ *进入低功耗 
+ ***********************************/
 static void sleep_mode_enter(void)
 {
     uint32_t err_code = bsp_indication_set(BSP_INDICATE_IDLE);
@@ -260,13 +255,9 @@ static void sleep_mode_enter(void)
     APP_ERROR_CHECK(err_code);
 }
 
-
-/**@brief Function for handling advertising events.
- *
- * @details This function will be called for advertising events which are passed to the application.
- *
- * @param[in] ble_adv_evt  Advertising event.
- */
+/************************************************
+*广播事件处理函数
+*************************************************/
 static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
 {
     uint32_t err_code;
@@ -286,10 +277,9 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
 }
 
 
-/**
+/******************************
  *BLE事件处理函数
- * 
- */
+ ******************************/
 static void on_ble_evt(ble_evt_t * p_ble_evt)
 {
     uint32_t                         err_code;
@@ -344,14 +334,9 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
 }
 
 
-/**@brief Function for dispatching a SoftDevice event to all modules with a SoftDevice 
- *        event handler.
- *
- * @details This function is called from the SoftDevice event interrupt handler after a 
- *          SoftDevice event has been received.
- *
- * @param[in] p_ble_evt  SoftDevice event.
- */
+/************************
+*BLE事件分发
+ ************************/
 
 static void ble_evt_dispatch(ble_evt_t * p_ble_evt)
 {
@@ -373,18 +358,18 @@ static void ble_evt_dispatch(ble_evt_t * p_ble_evt)
     
 }
 
+/*********************************
+*系统事件分发
+********************************/
 static void sys_evt_dispatch(uint32_t sys_evt)
 {
     pstorage_sys_event_handler(sys_evt);
     ble_advertising_on_sys_evt(sys_evt);
 }
 
-
-
-/**@brief Function for the SoftDevice initialization.
- *
- * @details This function initializes the SoftDevice and the BLE event interrupt.
- */
+/************************************
+ *BLE协议栈初始化
+ ***********************************/
 void ble_stack_init(void)
 {
     uint32_t err_code;
@@ -413,11 +398,91 @@ void ble_stack_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
+/***********************************************************
+*芯片uart接收处理函数
+*最长数据为20，将指纹模块返回的数据进行处理
+ ***********************************************************/
+static void uart_event_handle(app_uart_evt_t * p_event)
+{
+    uint32_t       err_code;
+	
+	//由于指纹模块是一个自动化的模块，只需将返回结果直接通过蓝牙串口返还给上位机即可
 
-/**@brief Function for handling events from the BSP module.
- *
- * @param[in]   event   Event generated by button press.
- */
+    switch (p_event->evt_type)
+    {
+        case APP_UART_DATA_READY:
+            UNUSED_VARIABLE(app_uart_get(&fig_send_data_array[fig_send_data_array_length]));
+            fig_send_data_array_length++;
+			//指纹模板的应答包分析
+			fig_fm260b_reply_check();
+            break;
+
+        case APP_UART_COMMUNICATION_ERROR:
+            APP_ERROR_HANDLER(p_event->data.error_communication);
+            break;
+
+        case APP_UART_FIFO_ERROR:
+            APP_ERROR_HANDLER(p_event->data.error_code);
+            break;
+
+        default:
+            break;
+    }
+}
+
+/*****************************
+* UART INIT
+******************************/
+void uart_init(void)
+{
+    uint32_t                     err_code;
+    const app_uart_comm_params_t comm_params =
+    {
+        RX_PIN_NUMBER,
+        TX_PIN_NUMBER,
+        RTS_PIN_NUMBER,
+        CTS_PIN_NUMBER,
+        APP_UART_FLOW_CONTROL_DISABLED,
+        false,
+        UART_BAUDRATE_BAUDRATE_Baud57600
+    };
+
+    APP_UART_FIFO_INIT( &comm_params,
+                       UART_RX_BUF_SIZE,
+                       UART_TX_BUF_SIZE,
+                       uart_event_handle,
+                       APP_IRQ_PRIORITY_LOW,
+                       err_code);
+    APP_ERROR_CHECK(err_code);
+}
+
+
+void advertising_init(void)
+{
+    uint32_t      err_code;
+    ble_advdata_t advdata;
+    ble_advdata_t scanrsp;
+
+    // Build advertising data struct to pass into @ref ble_advertising_init.
+    memset(&advdata, 0, sizeof(advdata));
+    advdata.name_type          = BLE_ADVDATA_FULL_NAME;
+    advdata.include_appearance = false;
+    advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE;
+
+    memset(&scanrsp, 0, sizeof(scanrsp));
+    scanrsp.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
+    scanrsp.uuids_complete.p_uuids  = m_adv_uuids;
+
+    ble_adv_modes_config_t options = {0};
+    options.ble_adv_fast_enabled  = BLE_ADV_FAST_ENABLED;
+    options.ble_adv_fast_interval = APP_ADV_INTERVAL;
+    options.ble_adv_fast_timeout  = APP_ADV_TIMEOUT_IN_SECONDS;
+
+    err_code = ble_advertising_init(&advdata, &scanrsp, &options, on_adv_evt, NULL);
+    APP_ERROR_CHECK(err_code);
+}
+
+
 static void bsp_event_handler(bsp_event_t event)
 {
     uint32_t err_code;
@@ -448,102 +513,6 @@ static void bsp_event_handler(bsp_event_t event)
     }
 }
 
-
-/*
-*芯片uart接收处理函数
-*最长数据为20，将指纹模块返回的数据进行处理
- */
-
-static void uart_event_handle(app_uart_evt_t * p_event)
-{
-    uint32_t       err_code;
-	
-	//由于指纹模块是一个自动化的模块，只需将返回结果直接通过蓝牙串口返还给上位机即可
-
-    switch (p_event->evt_type)
-    {
-        case APP_UART_DATA_READY:
-            UNUSED_VARIABLE(app_uart_get(&fig_send_data_array[fig_send_data_array_length]));
-            fig_send_data_array_length++;
-			//指纹模板的应答包分析
-			fig_reply_check();
-            break;
-
-        case APP_UART_COMMUNICATION_ERROR:
-            APP_ERROR_HANDLER(p_event->data.error_communication);
-            break;
-
-        case APP_UART_FIFO_ERROR:
-            APP_ERROR_HANDLER(p_event->data.error_code);
-            break;
-
-        default:
-            break;
-    }
-}
-/**@snippet [Handling the data received over UART] */
-
-
-/**@brief  Function for initializing the UART module.
- */
-/**@snippet [UART Initialization] */
-void uart_init(void)
-{
-    uint32_t                     err_code;
-    const app_uart_comm_params_t comm_params =
-    {
-        RX_PIN_NUMBER,
-        TX_PIN_NUMBER,
-        RTS_PIN_NUMBER,
-        CTS_PIN_NUMBER,
-        APP_UART_FLOW_CONTROL_DISABLED,
-        false,
-        UART_BAUDRATE_BAUDRATE_Baud57600
-    };
-
-    APP_UART_FIFO_INIT( &comm_params,
-                       UART_RX_BUF_SIZE,
-                       UART_TX_BUF_SIZE,
-                       uart_event_handle,
-                       APP_IRQ_PRIORITY_LOW,
-                       err_code);
-    APP_ERROR_CHECK(err_code);
-}
-/**@snippet [UART Initialization] */
-
-
-/**@brief Function for initializing the Advertising functionality.
- */
-void advertising_init(void)
-{
-    uint32_t      err_code;
-    ble_advdata_t advdata;
-    ble_advdata_t scanrsp;
-
-    // Build advertising data struct to pass into @ref ble_advertising_init.
-    memset(&advdata, 0, sizeof(advdata));
-    advdata.name_type          = BLE_ADVDATA_FULL_NAME;
-    advdata.include_appearance = false;
-    advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE;
-
-    memset(&scanrsp, 0, sizeof(scanrsp));
-    scanrsp.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
-    scanrsp.uuids_complete.p_uuids  = m_adv_uuids;
-
-    ble_adv_modes_config_t options = {0};
-    options.ble_adv_fast_enabled  = BLE_ADV_FAST_ENABLED;
-    options.ble_adv_fast_interval = APP_ADV_INTERVAL;
-    options.ble_adv_fast_timeout  = APP_ADV_TIMEOUT_IN_SECONDS;
-
-    err_code = ble_advertising_init(&advdata, &scanrsp, &options, on_adv_evt, NULL);
-    APP_ERROR_CHECK(err_code);
-}
-
-
-/**@brief Function for initializing buttons and leds.
- *
- * @param[out] p_erase_bonds  Will be true if the clear bonding button was pressed to wake the application up.
- */
 void buttons_leds_init(bool * p_erase_bonds)
 {
     bsp_event_t startup_event;
@@ -567,7 +536,6 @@ void power_manage(void)
     uint32_t err_code = sd_app_evt_wait();
     APP_ERROR_CHECK(err_code);
 }
-
 
 /*****************************************************
 *DM处理函数

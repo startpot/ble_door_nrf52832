@@ -25,7 +25,7 @@ struct key_store_length_struct
 
 #define SUPER_KEY_LENGTH		12
 //超级管理员秘钥
-extern char	super_key[SUPER_KEY_LENGTH];
+extern char							super_key[SUPER_KEY_LENGTH];
 
 //开门记录
 struct door_open_record
@@ -89,32 +89,32 @@ struct record_length_struct
 #define SEED_LENGTH					16
 
 
-extern pstorage_handle_t	block_id_flash_store;
+extern pstorage_handle_t				block_id_flash_store;
 
-extern pstorage_handle_t	block_id_default_params;
-extern pstorage_handle_t	block_id_mac;
-extern pstorage_handle_t	block_id_super_key;
-extern pstorage_handle_t	block_id_seed;
-extern pstorage_handle_t	block_id_device_name;
-extern pstorage_handle_t	block_id_key_store;
-extern pstorage_handle_t	block_id_record;
+extern pstorage_handle_t				block_id_default_params;
+extern pstorage_handle_t				block_id_mac;
+extern pstorage_handle_t				block_id_super_key;
+extern pstorage_handle_t				block_id_seed;
+extern pstorage_handle_t				block_id_device_name;
+extern pstorage_handle_t				block_id_key_store;
+extern pstorage_handle_t				block_id_record;
 
 extern struct key_store_length_struct		key_store_length;
 extern struct record_length_struct			record_length;
 
-extern bool key_store_length_setted;
-extern bool record_length_setted;
+extern bool				key_store_length_setted;
+extern bool				record_length_setted;
 
-extern pstorage_handle_t	block_id_write;
-extern pstorage_handle_t	block_id_read;
+extern pstorage_handle_t			block_id_write;
+extern pstorage_handle_t			block_id_read;
 //从flash中读出的数据
-extern uint8_t	flash_write_data[BLOCK_STORE_SIZE];
-extern uint8_t	flash_read_data[BLOCK_STORE_SIZE];
-extern uint8_t	flash_read_key_store_data[BLOCK_STORE_SIZE];
-extern uint8_t	flash_write_key_store_data[BLOCK_STORE_SIZE];
-extern uint8_t	flash_read_record_data[BLOCK_STORE_SIZE];
-extern uint8_t	flash_write_record_data[BLOCK_STORE_SIZE];
-extern uint8_t	flash_read_temp[BLOCK_STORE_SIZE];
+extern uint8_t					flash_write_data[BLOCK_STORE_SIZE];
+extern uint8_t					flash_read_data[BLOCK_STORE_SIZE];
+extern uint8_t					flash_read_key_store_data[BLOCK_STORE_SIZE];
+extern uint8_t					flash_write_key_store_data[BLOCK_STORE_SIZE];
+extern uint8_t					flash_read_record_data[BLOCK_STORE_SIZE];
+extern uint8_t					flash_write_record_data[BLOCK_STORE_SIZE];
+extern uint8_t					flash_read_temp[BLOCK_STORE_SIZE];
 
 void flash_init(void);
 void inter_flash_write(uint8_t *p_data, uint32_t data_len, \

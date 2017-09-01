@@ -21,7 +21,10 @@ static void ble_set_fig_free(void)
 	}
 }
 
-void fig_reply_check(void)
+/*********************************
+*指纹模块应答包处理模块
+*********************************/
+void fig_fm260b_reply_check(void)
 {
 //------------- 初始化上电后 --------接收到准备命令
 		//返回包长2

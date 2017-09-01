@@ -98,10 +98,51 @@ void sm4_test(void)
 	SM4_DPasswd(key, time, Interval, counter, Challenge, DynPwd);
 }
 
+
+static void set_mac_from_interflash(void)
+{
+	uint32_t err_code;
+	//如果配置了mac，则使用配置的mac
+	if(mac[0] =='w')
+	{
+		memset(addr.addr, 0, 6);
+		//拷贝设置的mac
+		memcpy(addr.addr, &mac[2], 6);
+		err_code = sd_ble_gap_address_set(BLE_GAP_ADDR_CYCLE_MODE_NONE,&addr);
+		if(err_code == NRF_SUCCESS)
+		{
+#if defined(BLE_DOOR_DEBUG)
+			printf(" use mac setted by user:");
+			for(int i=0; i<6;i++)
+			{
+				printf("%x ",mac[3+i]);
+			}
+			printf("\r\n");
+#endif
+		}		
+	}
+}
+
+static void set_peer_password(void)
+{
+	uint32_t err_code;
+	//添加配对密码
+	char *passcode = "123456";
+	ble_opt_t static_option;
+	
+	static_option.gap_opt.passkey.p_passkey = (uint8_t *)passcode;
+	err_code = sd_ble_opt_set(BLE_GAP_OPT_PASSKEY, &static_option);
+	APP_ERROR_CHECK(err_code);
+	
+#if defined(BLE_DOOR_DEBUG)
+	printf("ble pair pin set:%s \n",passcode);
+	printf("\r\n");
+#endif
+}
+
 /*****************************
 *Application main function.
 *****************************/
-
 int main(void)
 {
     uint32_t err_code;
@@ -110,8 +151,7 @@ int main(void)
 	
 	NRF_UICR->NFCPINS = 0;
 	
-    // Initialize.
-  //  APP_TIMER_INIT(APP_TIMER_PRESCALER, APP_TIMER_OP_QUEUE_SIZE, false);
+    //Initialize
     timers_init();
 	uart_init();
     buttons_leds_init(&erase_bonds);
@@ -144,42 +184,11 @@ int main(void)
 	//初始化触摸屏和指纹的中断函数
 	touch_finger_int_init();
 	
-	//如果配置了mac，则使用配置的mac
-	if(mac[0] =='w')
-	{
-		memset(addr.addr, 0, 6);
-		//拷贝设置的mac
-		memcpy(addr.addr, &mac[2], 6);
-		err_code = sd_ble_gap_address_set(BLE_GAP_ADDR_CYCLE_MODE_NONE,&addr);
-		if(err_code == NRF_SUCCESS)
-		{
-#if defined(BLE_DOOR_DEBUG)
-			printf(" use mac setted by user:");
-			for(int i=0; i<6;i++)
-			{
-				printf("%x ",mac[3+i]);
-			}
-	printf("\r\n");
-#endif
-		}		
-	}
+	//从内部flash中读取mac，设置
+	set_mac_from_interflash();
+	//设置配对密码
+	set_peer_password();
 
-
-	//添加配对密码
-	char *passcode = "123456";
-	ble_opt_t static_option;
-	
-	static_option.gap_opt.passkey.p_passkey = (uint8_t *)passcode;
-	err_code = sd_ble_opt_set(BLE_GAP_OPT_PASSKEY, &static_option);
-	APP_ERROR_CHECK(err_code);
-	
-#if defined(BLE_DOOR_DEBUG)
-	printf("ble pair pin set:%s \n",passcode);
-	printf("\r\n");
-#endif
-
-	
-	
 	application_timers_start();
     err_code = ble_advertising_start(BLE_ADV_MODE_FAST);
     APP_ERROR_CHECK(err_code);
@@ -197,4 +206,3 @@ int main(void)
 		}
     }
 }
-
