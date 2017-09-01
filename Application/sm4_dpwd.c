@@ -112,7 +112,16 @@ int SM4_DPasswd(uint8_t * pKey, uint64_t Time, uint16_t Interval, uint32_t Count
 		return DPWD_ERROR_INTERVAL_TOO_LARGE;
 	
 	uint64_t tTime;
-	tTime = Time / Interval;
+//	tTime = Time / Interval;
+	//上位机是大端字节，需要将小端字节变换为大端
+	tTime = ( (Time & 0xff00000000000000)/pow(2,56) +\
+					(Time & 0x00ff000000000000)/pow(2,40) +\
+					(Time & 0x0000ff0000000000)/pow(2,24) +\
+					(Time & 0x000000ff00000000)/pow(2,8)   +\
+					(Time & 0x00000000ff000000)*pow(2,8)   +\
+					(Time & 0x0000000000ff0000)*pow(2,24) +\
+					(Time & 0x000000000000ff00)*pow(2,40) +\
+					(Time & 0x00000000000000ff)*pow(2,56) )/Interval;
 
 	uint8_t sm_k[DPWD_KEY_LEN] = {0};
 	uint8_t sm_i[DPWD_UTC_TIME_LEN + DPWD_COUNTER_LEN + DPWD_CHALLENGE_LEN] = {0};

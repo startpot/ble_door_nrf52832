@@ -18,7 +18,7 @@ time_t my_mktime(struct tm *time)
 						(unsigned long) ((time->tm_year +1990)/4 - (time->tm_year+1990)/100 + (time->tm_year+1990)/400 + 367*time->tm_mon/12 + time->tm_mday) +\
 						(time->tm_year +1990)*365 - 719499)*24 + time->tm_hour /**//* now have hours */
 				 )*60 + time->tm_min /**//* now have minutes */
-			   )*60 + time->tm_sec; /**//* finally seconds */
+			   )*60 + time->tm_sec - 8*3600; /**//* finally seconds */
 
 }
 
