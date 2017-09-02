@@ -29,6 +29,7 @@
 #include "my_time.h"
 #include "operate_code.h"
 #include "fm260b.h"
+#include "r301t.h"
 
 #define APP_GPIOTE_MAX_USERS				1
 
@@ -332,8 +333,6 @@ static void check_key_express(char express_value)
 static void touch_finger_int_handler(uint32_t event_pins_low_to_high, uint32_t event_pins_high_to_low)
 {
 	
-	static uint8_t fig_cmd_autosearch[8]={ 0x1B, 0xFF, 0x22, 0x00, 0x00, 0x00, 0xFF, 0x3B};
-
 	if (event_pins_high_to_low & (1 << TOUCH_IIC_INT_PIN))
 	{
 		//触摸中断由高变低
@@ -342,14 +341,22 @@ static void touch_finger_int_handler(uint32_t event_pins_low_to_high, uint32_t e
 	}
 	if (event_pins_high_to_low & (1 << FIG_WAKE_N_PIN))
 	{
-		//指纹中断由高变低,自动化过程，判断如果不是上位机设置的注册模式，发送自动搜索
+		/*//指纹中断由高变低,自动化过程，判断如果不是上位机设置的注册模式，发送自动搜索
 		if(  is_autoenroll == false )
 		{
 			//未处在自动注册状态，发送自动搜索模板功能
-			for (uint32_t i = 0; i < 8; i++)
-			{
-				while(app_uart_put(fig_cmd_autosearch[i]) != NRF_SUCCESS);
-			}
+			fig_fm260b_send_autosearch();
+		}*/
+		
+		if(r301t_autosearch_step == 0 && is_r301t_autosearch == false)
+		{
+		//指纹模块r301t
+		//发送获取图像命令
+		fig_r301t_send_getimage();
+		//设置自动搜索标志位
+		is_r301t_autosearch = true;
+		//设置步骤为1
+		r301t_autosearch_step = 1;
 		}
 	}
 }

@@ -38,15 +38,6 @@ uint32_t					record_length_get;
 uint32_t					key_store_length_get;
 
 
-
-bool	fig_status = false;
-bool	exe_result = false;
-bool	is_autoenroll = false;
-
-//与指纹模块有关的参数
-uint16_t				fig_param_first = 0x0000;
-uint16_t				fig_param_second =0x0000;
-
 /***********************************
 *	设置开锁密码命令
 ************************************/
@@ -468,9 +459,9 @@ static void get_recent_record(uint8_t *p_data, uint16_t length)
 }
 
 /*****************************
-*指纹模块命令处理
+*指纹模块fm260b命令处理
 *****************************/
-static void send_fig_cmd(uint8_t *p_data, uint16_t length)
+static void send_fig_fm260b_cmd(uint8_t *p_data, uint16_t length)
 {
 	//获取第一参数和第二参数,两字节，大端
 	fig_param_first = nus_data_array[3] *256 + nus_data_array[4];
@@ -485,6 +476,18 @@ static void send_fig_cmd(uint8_t *p_data, uint16_t length)
 	{
 		//设置自动注册状态位
 		is_autoenroll = true;
+	}
+}
+
+/*****************************
+*指纹模块r301t命令处理
+*****************************/
+static void send_fig_r301t_cmd(uint8_t *p_data, uint16_t length)
+{
+	//将获取的指令发送给指纹模块
+	for (uint32_t i = 0; i < length; i++)
+	{
+		while(app_uart_put(nus_data_array[i]) != NRF_SUCCESS);
 	}
 }
 
@@ -572,11 +575,15 @@ void operate_code_check(uint8_t *p_data, uint16_t length)
 		}
 		break;
 		
-		case 0x1B://指纹模块指令，长度为8，直接通过串口发送给模块
+		case 0x1B://指纹模块fm260b指令，长度为8，直接通过串口发送给模块
 			if(length == 8)//长度为8
 			{
-				send_fig_cmd(nus_data_array, nus_data_array_length);
+				send_fig_fm260b_cmd(nus_data_array, nus_data_array_length);
 			}
+		break;
+		
+		case 0xEF:
+			send_fig_r301t_cmd(nus_data_array, nus_data_array_length);
 		break;
 		
 		default:

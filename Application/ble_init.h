@@ -81,7 +81,7 @@ extern uint8_t							nus_data_array[BLE_NUS_MAX_DATA_LEN];
 extern uint16_t						nus_data_array_length;
 
 //指纹模块发送给蓝牙芯片的数据
-extern uint8_t							fig_send_data_array[BLE_NUS_MAX_DATA_LEN];
+extern uint8_t							fig_send_data_array[UART_RX_BUF_SIZE];
 extern uint16_t						fig_send_data_array_length;
 
 //在编译的时候，代替弱连接，做ble的回调函数

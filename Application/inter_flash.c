@@ -9,7 +9,7 @@
 #include "ble_init.h"
 #include "set_params.h"
 
-char										super_key[SUPER_KEY_LENGTH];
+char											super_key[SUPER_KEY_LENGTH];
 
 pstorage_handle_t				block_id_flash_store;
 

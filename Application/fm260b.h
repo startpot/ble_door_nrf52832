@@ -71,6 +71,7 @@ extern bool		is_autoenroll;
 extern uint16_t	fig_param_first ;
 extern uint16_t	fig_param_second ;
 
+void fig_fm260b_send_autosearch(void);
 void fig_fm260b_reply_check(void);
 
 #endif		//FM260B_H__

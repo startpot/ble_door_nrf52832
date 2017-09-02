@@ -11,6 +11,30 @@
 #include "led_button.h"
 #include "ble_init.h"
 
+
+bool	fig_status = false;
+bool	exe_result = false;
+bool	is_autoenroll = false;
+
+//与指纹模块有关的参数
+uint16_t				fig_param_first = 0x0000;
+uint16_t				fig_param_second =0x0000;
+
+
+/**********************************
+*发送自动搜索模板
+***********************************/
+void fig_fm260b_send_autosearch(void)
+{
+	static uint8_t fig_cmd_autosearch[8]={ 0x1B, 0xFF, 0x22, 0x00, 0x00, 0x00, 0xFF, 0x3B};
+	for (uint32_t i = 0; i < 8; i++)
+	{
+		while(app_uart_put(fig_cmd_autosearch[i]) != NRF_SUCCESS);
+	}
+}
+
+
+
 static void ble_set_fig_free(void)
 {
 	static uint8_t fig_cmd_free[8]={0x1B,0xFF,0x00, 0x00,0x00, 0x00,0x00, 0x1A};

@@ -27,12 +27,13 @@
 
 #include "ble_init.h"
 #include "inter_flash.h"
-#include "fm260b.h"
+//#include "fm260b.h"
+#include  "r301t.h"
 #include "beep.h"
 #include "led_button.h"
 
-dm_application_instance_t 				m_app_handle;
-dm_handle_t											m_dm_handle;
+dm_application_instance_t                  m_app_handle;
+dm_handle_t                                            m_dm_handle;
 
 ble_uuid_t												m_adv_uuids[] = {{BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}};
 
@@ -48,7 +49,7 @@ uint8_t					nus_data_array[BLE_NUS_MAX_DATA_LEN];
 uint16_t					nus_data_array_length;
 
 //指纹模块发送给蓝牙芯片的数据
-uint8_t					fig_send_data_array[BLE_NUS_MAX_DATA_LEN];
+uint8_t					fig_send_data_array[UART_RX_BUF_SIZE];
 uint16_t					fig_send_data_array_length = 0;
 
 
@@ -91,7 +92,7 @@ void advertising_init(void);
 static void ad_repeat_timeout_handler(void *p_context)
 {
 	UNUSED_PARAMETER(p_context);
-	
+
 	//执行广播
 	advertising_init();
 }
@@ -105,20 +106,20 @@ void timers_init(void)
 
     // Initialize timer module.
     APP_TIMER_INIT(APP_TIMER_PRESCALER, APP_TIMER_OP_QUEUE_SIZE, false);
-	
+
 	 // Create timers.
 	// Create Security Request timer.
     err_code = app_timer_create(&m_sec_req_timer_id,
                                 APP_TIMER_MODE_SINGLE_SHOT,
                                 sec_req_timeout_handler);
     APP_ERROR_CHECK(err_code);
-	
+
 	//重复广播的定时器
 	err_code = app_timer_create(&m_ad_repeat_timer_id,
                                 APP_TIMER_MODE_REPEATED,
                                 ad_repeat_timeout_handler);
     APP_ERROR_CHECK(err_code);
-	
+
 }
 
 void application_timers_start(void)
@@ -139,7 +140,7 @@ void gap_params_init(void)
     ble_gap_conn_sec_mode_t sec_mode;
 
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&sec_mode);
-    
+
     err_code = sd_ble_gap_device_name_set(&sec_mode,
                                           (const uint8_t *) DEVICE_NAME,
                                           strlen(DEVICE_NAME));
@@ -177,7 +178,7 @@ static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data, uint16_t lengt
 	operate_code_setted = true;
 	//测试程序，将蓝牙串口的数据再返回给蓝牙串口
 //	ble_nus_string_send(&m_nus, nus_data_array, nus_data_array_length);
-	
+
 }
 /******************************************************
 *芯片蓝牙服务初始化，初始化一个串口服务
@@ -186,11 +187,11 @@ void services_init(void)
 {
     uint32_t       err_code;
     ble_nus_init_t nus_init;
-    
+
     memset(&nus_init, 0, sizeof(nus_init));
 
     nus_init.data_handler = nus_data_handler;
-    
+
     err_code = ble_nus_init(&m_nus, &nus_init);
     APP_ERROR_CHECK(err_code);
 }
@@ -201,7 +202,7 @@ void services_init(void)
 static void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
 {
     uint32_t err_code;
-    
+
     if(p_evt->evt_type == BLE_CONN_PARAMS_EVT_FAILED)
     {
         err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_CONN_INTERVAL_UNACCEPTABLE);
@@ -216,13 +217,13 @@ static void conn_params_error_handler(uint32_t nrf_error)
 
 
 /*********************************
-*连接参数初始化 
+*连接参数初始化
 *********************************/
 void conn_params_init(void)
 {
     uint32_t               err_code;
     ble_conn_params_init_t cp_init;
-    
+
     memset(&cp_init, 0, sizeof(cp_init));
 
     cp_init.p_conn_params                  = NULL;
@@ -233,13 +234,13 @@ void conn_params_init(void)
     cp_init.disconnect_on_fail             = false;
     cp_init.evt_handler                    = on_conn_params_evt;
     cp_init.error_handler                  = conn_params_error_handler;
-    
+
     err_code = ble_conn_params_init(&cp_init);
     APP_ERROR_CHECK(err_code);
 }
 
 /***********************************
- *进入低功耗 
+ *进入低功耗
  ***********************************/
 static void sleep_mode_enter(void)
 {
@@ -283,7 +284,7 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
 static void on_ble_evt(ble_evt_t * p_ble_evt)
 {
     uint32_t                         err_code;
-    
+
     switch (p_ble_evt->header.evt_id)
     {
         case BLE_GAP_EVT_CONNECTED:
@@ -291,7 +292,7 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
  //           APP_ERROR_CHECK(err_code);
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
             break;
-            
+
         case BLE_GAP_EVT_DISCONNECTED:
   //          err_code = bsp_indication_set(BSP_INDICATE_IDLE);
    //         APP_ERROR_CHECK(err_code);
@@ -313,8 +314,8 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
 #endif
 			}
 			break;
-		
-/*		
+
+/*
         case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
             // Pairing not supported
             err_code = sd_ble_gap_sec_params_reply(m_conn_handle, BLE_GAP_SEC_STATUS_PAIRING_NOT_SUPP, NULL, NULL);
@@ -340,22 +341,22 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
 
 static void ble_evt_dispatch(ble_evt_t * p_ble_evt)
 {
-	
+
 		//在断开连接事件后，初始化广播数据
 	if(p_ble_evt->header.evt_id == BLE_GAP_EVT_DISCONNECTED)
 	{
 		advertising_init();
 	}
-	
+
 	ble_conn_params_on_ble_evt(p_ble_evt);
     ble_nus_on_ble_evt(&m_nus, p_ble_evt);
-	
+
 	dm_ble_evt_handler(p_ble_evt);
-	
+
     on_ble_evt(p_ble_evt);
     ble_advertising_on_ble_evt(p_ble_evt);
     bsp_btn_ble_on_ble_evt(p_ble_evt);
-    
+
 }
 
 /*********************************
@@ -373,26 +374,26 @@ static void sys_evt_dispatch(uint32_t sys_evt)
 void ble_stack_init(void)
 {
     uint32_t err_code;
-    
+
     // Initialize SoftDevice.
     SOFTDEVICE_HANDLER_INIT(NRF_CLOCK_LFCLKSRC_XTAL_20_PPM, NULL);
-    
+
     ble_enable_params_t ble_enable_params;
     err_code = softdevice_enable_get_default_config(CENTRAL_LINK_COUNT,
                                                     PERIPHERAL_LINK_COUNT,
                                                     &ble_enable_params);
     APP_ERROR_CHECK(err_code);
-        
+
     //Check the ram settings against the used number of links
     CHECK_RAM_START_ADDR(CENTRAL_LINK_COUNT,PERIPHERAL_LINK_COUNT);
     // Enable BLE stack.
     err_code = softdevice_enable(&ble_enable_params);
     APP_ERROR_CHECK(err_code);
-    
+
     // Register with the SoftDevice handler module for BLE events.
     err_code = softdevice_ble_evt_handler_set(ble_evt_dispatch);
     APP_ERROR_CHECK(err_code);
-	
+
 	// Register with the SoftDevice handler module for BLE events.
     err_code = softdevice_sys_evt_handler_set(sys_evt_dispatch);
     APP_ERROR_CHECK(err_code);
@@ -405,7 +406,7 @@ void ble_stack_init(void)
 static void uart_event_handle(app_uart_evt_t * p_event)
 {
     uint32_t       err_code;
-	
+
 	//由于指纹模块是一个自动化的模块，只需将返回结果直接通过蓝牙串口返还给上位机即可
 
     switch (p_event->evt_type)
@@ -414,7 +415,13 @@ static void uart_event_handle(app_uart_evt_t * p_event)
             UNUSED_VARIABLE(app_uart_get(&fig_send_data_array[fig_send_data_array_length]));
             fig_send_data_array_length++;
 			//指纹模板的应答包分析
-			fig_fm260b_reply_check();
+		//	fig_fm260b_reply_check();	//指纹模块fm260b
+			
+			//收到的数据包长度至少12位
+			if(fig_send_data_array_length >11)
+			{	//指纹模块r301t
+				fig_r301t_reply_check();
+			}
             break;
 
         case APP_UART_COMMUNICATION_ERROR:
@@ -518,7 +525,7 @@ void buttons_leds_init(bool * p_erase_bonds)
     bsp_event_t startup_event;
 
     uint32_t err_code = bsp_init(BSP_INIT_LED | BSP_INIT_BUTTONS,
-                                 APP_TIMER_TICKS(100, APP_TIMER_PRESCALER), 
+                                 APP_TIMER_TICKS(100, APP_TIMER_PRESCALER),
                                  bsp_event_handler);
     APP_ERROR_CHECK(err_code);
 
@@ -564,10 +571,10 @@ static uint32_t device_manager_evt_handler(dm_handle_t const * p_handle,
 		//	dm_device_delete_all(&m_app_handle);
 			break;
 		case DM_EVT_SECURITY_SETUP:
-			
+
 			break;
 		case DM_EVT_SECURITY_SETUP_COMPLETE:
-			
+
 			break;
 		case DM_EVT_SERVICE_CONTEXT_DELETED:
 		//	if(m_conn_handle != BLE_CONN_HANDLE_INVALID)
@@ -577,7 +584,7 @@ static uint32_t device_manager_evt_handler(dm_handle_t const * p_handle,
 			break;
 		case DM_EVT_LINK_SECURED:
 			break;
-		
+
         default:
             break;
     }
@@ -606,7 +613,7 @@ void device_manager_init(bool erase_bonds)
     APP_ERROR_CHECK(err_code);
 
     memset(&register_param.sec_param, 0, sizeof(ble_gap_sec_params_t));
-    
+
     register_param.sec_param.bond         = SEC_PARAM_BOND;
     register_param.sec_param.mitm         = SEC_PARAM_MITM;
     register_param.sec_param.io_caps      = SEC_PARAM_IO_CAPABILITIES;
