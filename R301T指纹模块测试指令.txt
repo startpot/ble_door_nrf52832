@@ -1,0 +1,201 @@
+/**********************************************************************************************************************************
+*	命令包格式
+*	包头(2bytes,0xEF01)--模块地址(4bytes,0xFFFFFFFF)--包标识(1byte,0x01)--包长度(2bytes)--指令(1byte)--参数(Nbytes)--校验和(2bytes)
+*
+*	数据包格式
+*	包头(2bytes,0xEF01)--模块地址(4bytes,0xFFFFFFFF)--包标识(1byte,0x02)---包长度(2bytes)--数据(Nbytes)---校验和(2bytes)
+*
+*	结束包格式
+*	包头(2bytes,0xEF01)--模块地址(4bytes,0xFFFFFFFF)--包标识(1byte,0x08)---包长度(2bytes)--数据(Nbytes)---校验和(2bytes)
+*
+*	应答包格式
+*	包头(2bytes,0xEF01)--模块地址(4bytes,0xFFFFFFFF)--包标识(1byte,0x07)---包长度(2bytes)--确认码(1byte)--数据(Nbytes)---校验和(2bytes)
+*
+*********************************************************************************************************************************/
+
+
+1、录入图像	GR_GetImage
+	发送包：EF 01 FF FF FF FF	01	00 03	01	00 05
+	接收包：EF 01 FF FF FF FF	07	00 03	XX	SUM(2B)
+			XX:	00录入成功
+				01收包有错
+				02传感器上无手指
+				03录入不成功
+2、生成特征	GR_GenChar
+	发送包：EF 01 FF FF FF FF	01	00 04	02	BufferID	SUM
+			BufferID：	0x01表示CharBuffer1
+						0x02表示CharBuffer2
+	接收包：EF 01 FF FF FF FF	07	00 03	XX	SUM
+			XX:	00H 表示生成特征成功
+				01H 表示收包有错
+				06H 表示指纹图像太乱而生不成特征
+				07H 表示指纹图像正常，但特征点太少而生不成特征
+				15H 表示图像缓冲区内没有有效原始图而生不成图像
+3、精确对比两枚指纹特征	GR_Match
+	发送包：EF 01 FF FF FF FF	01	00 03	03	07
+	接收包：EF 01 FF FF FF FF	07	00 05	XX1 XX2	SUM
+			XX1:	00H 表示指纹匹配
+					01H 表示收包有错
+					08H 表示指纹不匹配
+			XX2:	对比得分
+4、搜索指纹 GR_Search
+	发送包：EF 01 FF FF FF FF	01	00 08	04 BufferID StartPage(2B) PageNum(2B)	SUM
+			BufferID：	0x01表示CharBuffer1
+						0x02表示CharBuffer2
+	接收包：EF 01 FF FF FF FF	07	00 07	XX PageID(2B) MatchScore(2B)	SUM
+			XX:	00H 表示搜索到
+				01H 表示收包有错
+				09H 表示没搜索到；此时页码与得分为 0
+5、合并特征（生成模板） GR_RegModel
+	发送包：EF 01 FF FF FF FF	01	00 03	05	09
+	接收包：EF 01 FF FF FF FF	07	00 03	XX	SUM
+			XX：00H 表示合并成功
+				01H 表示收包有错
+				=0aH 表示合并失败（两枚指纹不属于同一手指））
+6、储存模板 GR_StoreChar
+	发送包：EF 01 FF FF FF FF	01	00 06	06 BufferID PageID	SUM
+			BufferID：	0x01表示CharBuffer1
+						0x02表示CharBuffer2
+	接收包：EF 01 FF FF FF FF	07	00 03	XX	SUM
+			XX:	00H 表示储存成功
+				01H 表示收包有错
+				0bH 表示 PageID 超出指纹库范围
+				18H 表示写 FLASH 出错
+7、读出模板 GR_LoadChar
+	发送包：EF 01 FF FF FF FF	01	00 06`	07	BufferID PageID	SUM
+	接收包：EF 01 FF FF FF FF	07	00 03	XX	SUM
+			XX:	00H 表示读出成功
+				01H 表示收包有错
+				0cH 表示读出有错或模板无效
+				0BH 表示 PageID 超出指纹库范围
+8、上传特征或模板 GR_UpChar
+	发送包：EF 01 FF FF FF FF 	01	00 04	08	BufferID	SUM
+	接收包：EF 01 FF FF FF FF 	07	00 03  	XX	SUM
+			XX:	00H 表示随后发数据包
+				01H 表示收包有错
+				0dH 表示指令执行失败
+	应答之后发送后续数据包
+9、下载特征或模板 GR_DownChar
+	发送包：EF 01 FF FF FF FF 	01	00 04	09	BufferID	SUM
+	接收包：EF 01 FF FF FF FF	07	00 03	XX	SUM
+			XX:	00H 00H 表示可以接收后续数据包
+				01H 表示收包有错
+				0eH 表示不能接收后续数据包
+10、上传原始图像 GR_UpImage
+	发送包：EF 01 FF FF FF FF 	01	00 03	0a	00 0e
+	接收包：EF 01 FF FF FF FF 	07	00 03  	XX	SUM
+			XX：00H 表示接着发送后续数据包
+				01H 表示收包有错
+				0fH 表示不能发送后续数据包
+11、下载图像 GR_DownImage
+	发送包：EF 01 FF FF FF FF 	01	00 03	0b	00 0f
+	接收包：EF 01 FF FF FF FF 	07	00 03  	XX	SUM
+			XX:	00H 表示可以接收后续数据包
+				01H 表示收包有错
+				0eH 表示不能接收后续数据包
+12、删除模板 GR_DeletChar
+	发送包：EF 01 FF FF FF FF	01	00 07	0c PageID N	SUM
+	接收包：EF 01 FF FF FF FF 	07	00 03	XX	SUM
+			XX:	00H 表示删除模板成功
+				01H 表示收包有错
+				10H 表示删除模板失败
+13、清空指纹库 GR_Empty
+	发送包：EF 01 FF FF FF FF	01	00 03	0d 	00 11
+	接收包：EF 01 FF FF FF FF	07	00 03	XX	SUM
+			XX：00H 表示清空成功
+				01H 表示收包有错
+				11H 表示清空失败
+14、写系统寄存器 GR_WriteReg
+	发送包：EF 01 FF FF FF FF	01	00 05	0e 	寄存器序号(1B)	内容(1B)	SUM
+	接收包：EF 01 FF FF FF FF	07	00 03	XX	SUM
+			XX：00H 表示 OK
+				01H 表示收包有错
+				1aH 表示寄存器序号有误
+				
+	注：寄存器号	寄存器名称				内容说明
+			4		波特率控制寄存器		9600 的倍数 N
+			5		比对阀值寄存器			1：level1
+											2：level2
+											3：level3
+											4：level4
+											5：level5
+			6		包大小寄存器			0：32bytes
+											1：64bytes
+											
+15、读系统基本参数 GR_ReadSysPara
+	发送包：EF 01 FF FF FF FF	01	00 03	0f 	00 13
+	接收包：EF 01 FF FF FF FF	07	00 13	XX	基本参数列表(16B)	SUM
+			XX:	00H 表示 OK
+				01H 表示收包有错
+				
+	注：名称			内容说明				偏移量(字)			大小（字）
+		状态寄存器		系统的状态寄存器内容		0					1
+		识别码			固定为0x0009				1					1
+		指纹库大小		指纹库容量					2					1
+		安全等级		安全等级代码（1/2/3/4/5）	3					1
+		设备地址		32 位设备地址				4					2
+		数据包大小		数据包大小代码：			6					1
+						0：32bytes
+						1：62bytes
+						2：128bytes
+						3：256bytes
+		波特率设置		N(波特率为 9600*N bps)		7					1
+				
+16、设置口令 GR_SetPwd
+	发送包：EF 01 FF FF FF FF	01	00 07	12 	password(4B)	SUM
+	接收包：EF 01 FF FF FF FF		00 03	XX		SUM
+			XX:	00H 表示 OK
+				01H 表示收包有错
+17、验证口令 GR_VfyPwd
+	发送包：EF 01 FF FF FF FF	01	00 07	13 	password(4B)	SUM
+	接收包：EF 01 FF FF FF FF	07	00 03	XX		SUM
+			XX:	00H 表示口令验证正确
+				01H 表示收包有错
+				13H 表示口令不正确
+18、采样随机数 GR_GetRandomCode
+	发送包：EF 01 FF FF FF FF 01 00 03 14 00 18
+	接收包：EF 01 FF FF FF FF 07 00 07 XX1 随机数(4B)	SUM
+			XX1:00H 表示生成成功
+				01H 表示收包有错
+19、设置模块地址 GR_SetAddr
+	发送包：EF 01 FF FF FF FF	01	00 07	15 	模块地址(4B)	SUM
+	接收包：EF 01 FF FF FF FF	07	00 07	XX		SUM------------------------------------
+			XX:	00H 表示生成地址成功
+				=01H 表示收包有错
+20、端口控制 GR_Port_Control
+	发送包：EF 01 FF FF FF FF	01	00 04	17 	控制码(0/1)	SUM
+	接收包：EF 01 FF FF FF FF	07	00 03	XX		SUM
+			XX:	00H 表示端口操作成功
+				01H 表示收包有错
+				1dH 表示端口操作失败
+21、写记事本 GR_WriteNotepad
+	发送包：EF 01 FF FF FF FF 	01  00 36	18	页码(1B 0-15) 用户信息(32bytes) SUM
+	接收包：EF 01 FF FF FF FF 	07 	00 03	XX  SUM
+			XX:	00H 表示 OK
+				01H 表示收包有错
+22、读记事GR_ReadNotepad
+	发送包：EF 01 FF FF FF FF 	01  00 04	18	页码(1B 0-15) SUM
+	接收包：EF 01 FF FF FF FF 	07 	00 24	XX  用户信息(32bytes)	SUM
+			XX:	00H 表示 OK
+				01H 表示收包有错
+23、生成细化指纹图像 GR_GenBinImage
+	发送包：EF 01 FF FF FF FF 	01	00 04	1c	目标类型(1byte)	SUM
+			目标类型：	0：二值化图像
+						1：不含特征点标识的细化图像
+						2 或其他：带有特征点标识的细化图像
+	接收包：EF 01 FF FF FF FF 	07 	00 03	XX  SUM
+			XX:	01H 表示收包有错-------------------------------
+				15H 表示无效指纹图像
+				07H 表示没有足够特征信息
+				06H 表示图像质量太差
+24、读有效模板个数 GR_ValidTempleteNum
+	发送包：EF 01 FF FF FF FF 01 	00 03 	1d	00 21
+	接收包：EF 01 FF FF FF FF 07	00 05	XX	有效模板个数(2bytes)	SUM
+			XX:	00H 表示读取成功
+				01H 表示收包有错
+25、读索引表GR_ReadIndexTable
+	发送包：EF 01 FF FF FF FF 01 	00 04	1f	页码(1B 0-3)	SUM
+	接收包：EF 01 FF FF FF FF 07   	00 23	XX	索引信息(32bytes)	SUM
+			XX:	00H 表示读取成功
+				01H 表示收包有错
+	注：由低字节到高字节，依次用0/1表示。0为无模板，1存在模板
