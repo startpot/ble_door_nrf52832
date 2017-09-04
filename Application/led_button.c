@@ -348,15 +348,13 @@ static void touch_finger_int_handler(uint32_t event_pins_low_to_high, uint32_t e
 			fig_fm260b_send_autosearch();
 		}*/
 		
-		if(r301t_autosearch_step == 0 && is_r301t_autosearch == false)
+		if(r301t_autosearch_step == 0 && is_r301t_autoenroll == false)
 		{
 		//指纹模块r301t
 		//发送获取图像命令
-		fig_r301t_send_getimage();
-		//设置自动搜索标志位
-		is_r301t_autosearch = true;
+//		fig_r301t_send_getimage();
 		//设置步骤为1
-		r301t_autosearch_step = 1;
+//		r301t_autosearch_step = 1;
 		}
 	}
 }

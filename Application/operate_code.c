@@ -17,6 +17,7 @@
 #include "my_time.h"
 #include "led_button.h"
 #include "fm260b.h"
+#include "r301t.h"
 
 struct key_store_struct				key_store_struct_set;
 
@@ -458,9 +459,9 @@ static void get_recent_record(uint8_t *p_data, uint16_t length)
 	}
 }
 
-/*****************************
-*指纹模块fm260b命令处理
-*****************************/
+/*******************************************************
+*指纹模块fm260b命令处理,主要调用uart端口
+*******************************************************/
 static void send_fig_fm260b_cmd(uint8_t *p_data, uint16_t length)
 {
 	//获取第一参数和第二参数,两字节，大端
@@ -479,9 +480,9 @@ static void send_fig_fm260b_cmd(uint8_t *p_data, uint16_t length)
 	}
 }
 
-/*****************************
-*指纹模块r301t命令处理
-*****************************/
+/***********************************************************
+*指纹模块r301t命令处理，调用uart端口
+***********************************************************/
 static void send_fig_r301t_cmd(uint8_t *p_data, uint16_t length)
 {
 	//将获取的指令发送给指纹模块
@@ -499,6 +500,8 @@ static void send_fig_r301t_cmd(uint8_t *p_data, uint16_t length)
 void operate_code_check(uint8_t *p_data, uint16_t length)
 {
 	uint8_t err_code;
+	static uint8_t fig_r301t_autoenroll_reply[12]={0xEF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF,\
+																			  0x07, 0x00, 0x03, 0x00, 0x00, 0x0A};
 	switch(p_data[0])
 	{
 		case 0x30://设置开锁秘钥
@@ -583,7 +586,29 @@ void operate_code_check(uint8_t *p_data, uint16_t length)
 		break;
 		
 		case 0xEF:
-			send_fig_r301t_cmd(nus_data_array, nus_data_array_length);
+			if(length >11) //传送命令包最少12位
+			{
+			//判断是不是自动注册命令
+			if(p_data[GR_FIG_DATA_ID_SITE] == GR_FIG_DATA_ID_CMD && \
+				p_data[GR_FIG_CMD_SITE]==GR_FIG_CMD_AUTOENROLL)
+			{
+				//设置标志位为true
+				is_r301t_autoenroll = true;
+				//发送上位机返回包
+				ble_nus_string_send(&m_nus,fig_r301t_autoenroll_reply, 12);
+			}
+			else
+			{
+				send_fig_r301t_cmd(nus_data_array, nus_data_array_length);
+				//判断是不是存储模板命令，自动注册指纹的最后一步
+				if(p_data[GR_FIG_DATA_ID_SITE] == GR_FIG_DATA_ID_CMD && \
+				p_data[GR_FIG_CMD_SITE]== GR_FIG_CMD_STORECHAR)
+				{
+					//设置标志位为false
+				is_r301t_autoenroll = false;
+				}
+			}
+			}
 		break;
 		
 		default:

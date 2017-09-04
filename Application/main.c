@@ -170,7 +170,9 @@ int main(void)
 	//初始化灯，拉高，灭
 	leds_init();
 //	led test
-//	leds_on(LED_1,5);
+//	nrf_gpio_pin_clear(LED_12);
+//	nrf_gpio_pin_clear(LED_13);
+	leds_on(LED_13,5);
 //	leds_on(LED_11,5);
 	
 	//初始化电机

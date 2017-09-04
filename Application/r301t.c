@@ -13,7 +13,7 @@
 #include "ble_init.h"
 
 
-bool		is_r301t_autosearch = false;
+bool		is_r301t_autoenroll = false;
 uint8_t 	r301t_autosearch_step = 0;
 
 void fig_r301t_send_getimage(void)
@@ -112,21 +112,21 @@ void fig_r301t_reply_check(void)
 	static uint32_t	send_left;
 	static uint8_t		send_genchar_data[13] ={0xEF,0x01,\
 																				0xFF,0xFF,0xFF,0xFF,\
-																				0x01,0x00,0x04,0x02,0x01,0x00,0x09};
+																				0x01,0x00,0x04,0x02,0x01,0x00,0x08};
 	
 	static uint8_t		send_search_data[17] ={0xEF,0x01,\
 																				0xFF,0xFF,0xFF,0xFF,\
 																				0x01,0x00,0x08,0x04,\
-																				0x00,0x00,  0x06, 0xa4,\
-																				0x00, 0xb7};
+																				0x01,0x00,0x00,  0x0b, 0xb8,\
+																				0x00, 0xd1};
 		//获取包长度
 		reply_data_len = fig_send_data_array[GR_FIG_DATA_LEN_SITE]*0x100+fig_send_data_array[GR_FIG_DATA_LEN_SITE +1];
 		
 		//当数据包的总长度等于包长度+9的时候收完总的数据包
 		if(fig_send_data_array_length ==(9+reply_data_len))
 		{
-			//TODO分析数据包
-			if(	is_r301t_autosearch == true)
+			//分析数据包,如果不是自动注册模式
+			if(	is_r301t_autoenroll ==false)
 			{
 				//手指按下设置的自动搜索模式，
 				//应答包失败
@@ -134,8 +134,9 @@ void fig_r301t_reply_check(void)
 				{
 					//应答失败，鸣笛
 					beep_didi(5);
+					fig_send_data_array_length = 0;
 				}
-				else if(r301t_autosearch_step == 1)
+				else if( is_r301t_autoenroll ==false && r301t_autosearch_step == 1)
 				{
 					//第一步的应答包的话，发送第2个指令，设置步骤为2
 					for (uint32_t m = 0; m < 13; m++)
@@ -143,8 +144,9 @@ void fig_r301t_reply_check(void)
 						while(app_uart_put(send_genchar_data[m]) != NRF_SUCCESS);
 					}
 					r301t_autosearch_step =2;
+					fig_send_data_array_length = 0;
 				}
-				else if(r301t_autosearch_step == 2)
+				else if( is_r301t_autoenroll ==false && r301t_autosearch_step == 2)
 				{
 					//第二步的应答包的话，发送第3个指令，设置步骤为3
 					for (uint32_t m = 0; m < 17; m++)
@@ -152,22 +154,26 @@ void fig_r301t_reply_check(void)
 						while(app_uart_put(send_search_data[m]) != NRF_SUCCESS);
 					}
 					r301t_autosearch_step =3;
+					fig_send_data_array_length = 0;
 				}
-				else if(r301t_autosearch_step ==3)
+				else if( is_r301t_autoenroll ==false && r301t_autosearch_step ==3)
 				{
 					//最后一步，判断结果，表示搜索到了，开门
 					ble_door_open();
 					//设置步骤为0，状态为false
 					r301t_autosearch_step = 0;
-					is_r301t_autosearch = false;
+					is_r301t_autoenroll = false;
+					fig_send_data_array_length = 0;
 				}
 			}
-					
+			
+			//无论如何都会将结果返还给上位机的
 			//将模块的返回包全部通过蓝牙串口返回给上位机
 			if(fig_send_data_array_length <=BLE_NUS_MAX_DATA_LEN)
 			{
 				//数据长度小于20，一次发完
 				ble_nus_string_send(&m_nus,fig_send_data_array, fig_send_data_array_length);
+				fig_send_data_array_length = 0;
 			}
 			else
 			{

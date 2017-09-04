@@ -2,33 +2,15 @@
 #define CUSTOM_BOARD_H
 
 /************************************************************
-*----------------------custom_board.h-------------------------
-*	板子的主要引脚分布 io置1为亮
-*-------------------------------------------------------------
-*	按键键位LEDx：
-*	LED1		P.18			LED5		P.17			LED9		P.22
-*	LED2		P.15			LED6		P.7				LED10		P.6
-*	LED3		P.14			LED7		P.8				LED11		P.9
-*	LED4		P.13			LED8		P.12			LED13		P.10
-*																			LED12		P.11
-*																(LED13(绿)LED12(蓝)对应1个键位)
-*--------------------------------------------------------------
-*	电机驱动芯片()
-*	6(bi--backward input)			P.3
-*	7(fi--forward input)			P.2
-*--------------------------------------------------------------
-*	触摸屏(iic)
-*	4(iic_en)			P.25
-*	3(int)				P.24
-*	2(scl)				P.0
-*	1(sda)				p.1
-*---------------------------------------------------------------
-*	蜂鸣器()
-*	1(驱动脚)			P.4
-*---------------------------------------------------------------
-*	UART(JK5)
-*	3(TX)					P.29
-*	4(RX)					P.28
+
+鎺у埗灏忔澘					鎸囩汗妯″潡r301t
+J4-1(vt 3.3v)				6(touch_power)
+J4-2(vcc 5v)				1(vcc 5v)
+J4-3(rxd)					3(txd)
+J4-4(txd)						4(rxd)
+J4-5(gnd)					2(gnd)
+J4-6(touch_in)			5(touch_in)
+
 *************************************************************/
 
 
@@ -101,12 +83,12 @@
 #define LEDS_INV_MASK  LEDS_MASK
 
 
-#define RX_PIN_NUMBER		18
-#define TX_PIN_NUMBER  	17
-#define CTS_PIN_NUMBER 	21
-#define RTS_PIN_NUMBER 	24
-#define HWFC           false
-#define FIG_WAKE_N_PIN	16
+#define RX_PIN_NUMBER			18
+#define TX_PIN_NUMBER			17
+#define CTS_PIN_NUMBER		21
+#define RTS_PIN_NUMBER		24
+#define HWFC								false
+#define FIG_WAKE_N_PIN		16
 
 
 
@@ -122,7 +104,7 @@
 #define	RTC_IIC_SDA_PIN		26
 
 //MOTO
-#define MOTO_FI    			15
+#define MOTO_FI				15
 #define MOTO_BI				14
 
 // Low frequency clock source to be used by the SoftDevice

@@ -2,7 +2,7 @@
 #define R301T_H__
 
 /**********************************************************
-*r301t是一个指纹模块，容量1700
+*r301t是一个指纹模块，容量0x0bb8  (3000)
 *   pin1------5v
 *   pin2------GND
 *   pin3------TXD
@@ -82,6 +82,8 @@
 //系统默认口令为0，若默认口令未被修改，则系统不要求验证口令，上位机可以直接与芯片通讯；
 //若口令被修改，则上位机与芯片通讯的第一个指令必须是验证口令，只有口令验证通过后，芯片才接收其它指令。
 
+#define		GR_FIG_CMD_SITE					9	//命令的位置
+
 #define		GR_FIG_CMD_GETIMG				0x01	//从传感器上读入图像存于图像缓冲区
 #define		GR_FIG_CMD_GENCHAR		0x02	//根据原始图像生成指纹特征存于CharBuffer1 或CharBuffer2
 #define		GR_FIG_CMD_MATCH				0x03	//精确比对CharBuffer1 与CharBuffer2 中的特征文件
@@ -107,10 +109,11 @@
 #define		GR_FIG_CMD_GENBINIMG		0x1C	//生成二值化指纹图像
 #define		GR_FIG_CMD_VTNUM				0x1D	//读有效模板个数
 #define		GR_FIG_CMD_RDINDEXTB		0x1F	//读索引表
+#define		GR_FIG_CMD_AUTOENROLL	0xFF	//设置自动注册，add by ln
 
 
 
-extern bool		is_r301t_autosearch;
+extern bool		is_r301t_autoenroll;
 extern uint8_t 	r301t_autosearch_step;
 
 void fig_r301t_send_getimage(void);
