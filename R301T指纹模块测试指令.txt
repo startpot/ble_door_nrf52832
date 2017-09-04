@@ -14,15 +14,15 @@
 *********************************************************************************************************************************/
 
 
-1、录入图像	GR_GetImage
+1、录入图像	GR_GetImage(TESTED)
 	发送包：EF 01 FF FF FF FF	01	00 03	01	00 05
 	接收包：EF 01 FF FF FF FF	07	00 03	XX	SUM(2B)
 			XX:	00录入成功
 				01收包有错
 				02传感器上无手指
 				03录入不成功
-2、生成特征	GR_GenChar
-	发送包：EF 01 FF FF FF FF	01	00 04	02	BufferID	SUM
+2、生成特征	GR_GenChar(TESTED)
+	发送包：EF 01 FF FF FF FF	01	00 04	02	BufferID(1B)	SUM
 			BufferID：	0x01表示CharBuffer1
 						0x02表示CharBuffer2
 	接收包：EF 01 FF FF FF FF	07	00 03	XX	SUM
@@ -38,8 +38,8 @@
 					01H 表示收包有错
 					08H 表示指纹不匹配
 			XX2:	对比得分
-4、搜索指纹 GR_Search
-	发送包：EF 01 FF FF FF FF	01	00 08	04 BufferID StartPage(2B) PageNum(2B)	SUM
+4、搜索指纹 GR_Search(TESTED)
+	发送包：EF 01 FF FF FF FF	01	00 08	04 BufferID(1B) StartPage(2B) PageNum(2B)	SUM
 			BufferID：	0x01表示CharBuffer1
 						0x02表示CharBuffer2
 	接收包：EF 01 FF FF FF FF	07	00 07	XX PageID(2B) MatchScore(2B)	SUM
@@ -93,13 +93,13 @@
 			XX:	00H 表示可以接收后续数据包
 				01H 表示收包有错
 				0eH 表示不能接收后续数据包
-12、删除模板 GR_DeletChar
-	发送包：EF 01 FF FF FF FF	01	00 07	0c PageID N	SUM
+12、删除模板 GR_DeletChar(TESTED)
+	发送包：EF 01 FF FF FF FF	01	00 07	0c PageID(2B) N(2B)	SUM
 	接收包：EF 01 FF FF FF FF 	07	00 03	XX	SUM
 			XX:	00H 表示删除模板成功
 				01H 表示收包有错
 				10H 表示删除模板失败
-13、清空指纹库 GR_Empty
+13、清空指纹库 GR_Empty(TESTED)
 	发送包：EF 01 FF FF FF FF	01	00 03	0d 	00 11
 	接收包：EF 01 FF FF FF FF	07	00 03	XX	SUM
 			XX：00H 表示清空成功
@@ -122,24 +122,25 @@
 			6		包大小寄存器			0：32bytes
 											1：64bytes
 											
-15、读系统基本参数 GR_ReadSysPara
+15、读系统基本参数 GR_ReadSysPara(TESTED)-----------------------------
 	发送包：EF 01 FF FF FF FF	01	00 03	0f 	00 13
 	接收包：EF 01 FF FF FF FF	07	00 13	XX	基本参数列表(16B)	SUM
+		(实际接收包)EF 01 FF FF FF FF 	07 	00 13 	00 	00 00 	00 00 	0B B8 	00 03 	FF FF FF FF 	00 02 	00 06 	04 E4 
 			XX:	00H 表示 OK
 				01H 表示收包有错
 				
 	注：名称			内容说明				偏移量(字)			大小（字）
-		状态寄存器		系统的状态寄存器内容		0					1
-		识别码			固定为0x0009				1					1
-		指纹库大小		指纹库容量					2					1
-		安全等级		安全等级代码（1/2/3/4/5）	3					1
-		设备地址		32 位设备地址				4					2
-		数据包大小		数据包大小代码：			6					1
+		状态寄存器		系统的状态寄存器内容		0					1		----0000
+		识别码			固定为0x0000				1					1		----0000
+		指纹库大小		指纹库容量					2					1		----0BB8(3000)
+		安全等级		安全等级代码（1/2/3/4/5）	3					1		----0003
+		设备地址		32 位设备地址				4					2		----FFFFFFFF
+		数据包大小		数据包大小代码：			6					1		----0002
 						0：32bytes
 						1：62bytes
 						2：128bytes
 						3：256bytes
-		波特率设置		N(波特率为 9600*N bps)		7					1
+		波特率设置		N(波特率为 9600*N bps)		7					1		-----0006
 				
 16、设置口令 GR_SetPwd
 	发送包：EF 01 FF FF FF FF	01	00 07	12 	password(4B)	SUM
@@ -152,14 +153,14 @@
 			XX:	00H 表示口令验证正确
 				01H 表示收包有错
 				13H 表示口令不正确
-18、采样随机数 GR_GetRandomCode
+18、采样随机数 GR_GetRandomCode(TESTED)
 	发送包：EF 01 FF FF FF FF 01 00 03 14 00 18
 	接收包：EF 01 FF FF FF FF 07 00 07 XX1 随机数(4B)	SUM
 			XX1:00H 表示生成成功
 				01H 表示收包有错
-19、设置模块地址 GR_SetAddr
+19、设置模块地址 GR_SetAddr(TESTED)
 	发送包：EF 01 FF FF FF FF	01	00 07	15 	模块地址(4B)	SUM
-	接收包：EF 01 FF FF FF FF	07	00 07	XX		SUM------------------------------------
+	接收包：EF 01 FF FF FF FF	07	00 03	XX		SUM
 			XX:	00H 表示生成地址成功
 				=01H 表示收包有错
 20、端口控制 GR_Port_Control
@@ -188,14 +189,39 @@
 				15H 表示无效指纹图像
 				07H 表示没有足够特征信息
 				06H 表示图像质量太差
-24、读有效模板个数 GR_ValidTempleteNum
+24、读有效模板个数 GR_ValidTempleteNum(TESTED)
 	发送包：EF 01 FF FF FF FF 01 	00 03 	1d	00 21
 	接收包：EF 01 FF FF FF FF 07	00 05	XX	有效模板个数(2bytes)	SUM
 			XX:	00H 表示读取成功
 				01H 表示收包有错
-25、读索引表GR_ReadIndexTable
+25、读索引表GR_ReadIndexTable(TESTED)
 	发送包：EF 01 FF FF FF FF 01 	00 04	1f	页码(1B 0-3)	SUM
 	接收包：EF 01 FF FF FF FF 07   	00 23	XX	索引信息(32bytes)	SUM
 			XX:	00H 表示读取成功
 				01H 表示收包有错
 	注：由低字节到高字节，依次用0/1表示。0为无模板，1存在模板
+	
+------------------------------------注册一个指纹------------------------------
+1、发送GR_GetImage					等待接收包，读取图像后，执行第2步；否则，继续第1步
+	EF 01 FF FF FF FF	01	00 03	01	00 05
+2、发送GR_Genchar(BufferID=1)		等待接收包，OK的话，执行第3步；否则，继续第1步
+	EF 01 FF FF FF FF	01	00 04	02	01	00 08
+3、发送GR_GetImage					等待接收包，读取图像后，执行第4步；否则，继续第3步
+	EF 01 FF FF FF FF	01	00 03	01	00 05
+4、发送GR_Genchar(BufferID=2)		等待接收包，OK的话，执行第5步；否则，继续第3步
+	EF 01 FF FF FF FF	01	00 04	02	02	00 09
+5、发送GR_RegModel					等待接收包，OK的话，执行第6步，否则，执行失败，结束。
+	EF 01 FF FF FF FF	01 	00 03	05	00 09
+6、发送GR_StoreChar(BufferID=2)		等待接收包，OK，注册成功，结束
+	EF 01 FF FF FF FF	01 	00 06	06	02	00 00	00 0F	-----注册BufferID 2的指纹到flash的ID0
+	
+-------------------------------------搜索一个指纹---------------------------------
+1、发送GR_GetImage					等待接收包，读取图像后，执行第2步；否则，继续第1步
+	EF 01 FF FF FF FF	01	00 03	01	00 05
+2、发送GR_Genchar(BufferID=1)		等待接收包，OK，执行第三步
+	EF 01 FF FF FF FF	01	00 04	02	01	00 08
+3、发送GR_Search(startpage=0,pagenum=3000)		等待接收包，根据接收包做判断，结束
+	EF 01 FF FF FF FF	01	00 08	04	01	00 00	0B B8	00 D1
+
+	
+	
