@@ -501,31 +501,31 @@ static void send_fig_r301t_cmd(uint8_t *p_data, uint16_t length)
 	static uint8_t fig_r301t_autoenroll_reply[12]={0xEF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF,\
 																				  0x07, 0x00, 0x03, 0x00, 0x00, 0x0A};
 	//判断是不是自动注册命令
-			if(p_data[GR_FIG_DATA_ID_SITE] == GR_FIG_DATA_ID_CMD && \
-				p_data[GR_FIG_CMD_SITE]==GR_FIG_CMD_AUTOENROLL)
-			{
-				//设置标志位为true
-				is_r301t_autoenroll = true;
-				//发送上位机返回包
-				memcpy(nus_data_send, fig_r301t_autoenroll_reply,sizeof(fig_r301t_autoenroll_reply));
-				nus_data_send_length = sizeof(fig_r301t_autoenroll_reply);
-				ble_nus_string_send(&m_nus,nus_data_send, nus_data_send_length);
-			}
-			else
-			{
-				//将获取的指令发送给指纹模块
-				for (uint32_t i = 0; i < length; i++)
-				{
-					while(app_uart_put(p_data[i]) != NRF_SUCCESS);
-				}
-				//判断是不是存储模板命令，自动注册指纹的最后一步
-				if(p_data[GR_FIG_DATA_ID_SITE] == GR_FIG_DATA_ID_CMD && \
-				p_data[GR_FIG_CMD_SITE]== GR_FIG_CMD_STORECHAR)
-				{
-					//设置标志位为false
-				is_r301t_autoenroll = false;
-				}
-			}
+	if(p_data[GR_FIG_DATA_ID_SITE] == GR_FIG_DATA_ID_CMD && \
+		p_data[GR_FIG_CMD_SITE]==GR_FIG_CMD_AUTOENROLL)
+	{
+		//设置标志位为true
+		is_r301t_autoenroll = true;
+		//发送上位机返回包
+		memcpy(nus_data_send, fig_r301t_autoenroll_reply,sizeof(fig_r301t_autoenroll_reply));
+		nus_data_send_length = sizeof(fig_r301t_autoenroll_reply);
+		ble_nus_string_send(&m_nus,nus_data_send, nus_data_send_length);
+	}
+	else
+	{
+		//将获取的指令发送给指纹模块
+		for (uint32_t i = 0; i < length; i++)
+		{
+			while(app_uart_put(p_data[i]) != NRF_SUCCESS);
+		}
+		//判断是不是存储模板命令，自动注册指纹的最后一步
+		if(p_data[GR_FIG_DATA_ID_SITE] == GR_FIG_DATA_ID_CMD && \
+			p_data[GR_FIG_CMD_SITE]== GR_FIG_CMD_STORECHAR)
+		{
+			//设置标志位为false
+			is_r301t_autoenroll = false;
+		}
+	}
 }
 
 /************************************************************

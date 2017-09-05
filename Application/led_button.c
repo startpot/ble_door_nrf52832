@@ -352,9 +352,9 @@ static void touch_finger_int_handler(uint32_t event_pins_low_to_high, uint32_t e
 		{
 		//指纹模块r301t
 		//发送获取图像命令
-//		fig_r301t_send_getimage();
+		fig_r301t_send_getimage();
 		//设置步骤为1
-//		r301t_autosearch_step = 1;
+		r301t_autosearch_step = 1;
 		}
 	}
 }
