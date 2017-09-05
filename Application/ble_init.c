@@ -48,6 +48,9 @@ bool						operate_code_setted = false;
 uint8_t					nus_data_recieve[BLE_NUS_MAX_DATA_LEN];
 uint16_t					nus_data_recieve_length;
 
+uint8_t				nus_data_send[BLE_NUS_MAX_DATA_LEN];//20位,发送给上位机的
+uint32_t				nus_data_send_length = 0;
+
 //指纹模块发送给蓝牙芯片的数据
 uint8_t					fig_send_data_array[UART_RX_BUF_SIZE];
 uint16_t					fig_send_data_array_length = 0;
@@ -261,8 +264,6 @@ static void sleep_mode_enter(void)
 *************************************************/
 static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
 {
-    uint32_t err_code;
-
     switch (ble_adv_evt)
     {
         case BLE_ADV_EVT_FAST:
@@ -405,8 +406,6 @@ void ble_stack_init(void)
  ***********************************************************/
 static void uart_event_handle(app_uart_evt_t * p_event)
 {
-    uint32_t       err_code;
-
 	//由于指纹模块是一个自动化的模块，只需将返回结果直接通过蓝牙串口返还给上位机即可
 
     switch (p_event->evt_type)

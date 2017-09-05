@@ -80,6 +80,9 @@ extern bool								operate_code_setted;
 extern uint8_t							nus_data_recieve[BLE_NUS_MAX_DATA_LEN];
 extern uint16_t						nus_data_recieve_length;
 
+extern uint8_t							nus_data_send[BLE_NUS_MAX_DATA_LEN];//20位,发送给蓝牙串口的数据
+extern uint32_t						nus_data_send_length;//测试数据存储时，长度的全局变量
+
 //指纹模块发送给蓝牙芯片的数据
 extern uint8_t							fig_send_data_array[UART_RX_BUF_SIZE];
 extern uint16_t						fig_send_data_array_length;

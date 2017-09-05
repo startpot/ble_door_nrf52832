@@ -84,7 +84,7 @@ void leds_init(void)
 void leds_on(uint8_t led_pin, uint32_t ms)
 {
 	uint32_t tmp=1<<led_pin;
-	if((tmp & LEDS_MASK) >>led_pin == 1)
+	if((tmp & LEDS_MASK)  == tmp)
 	{
 		nrf_gpio_pin_clear(led_pin);
 		nrf_delay_ms(ms*100);
@@ -128,12 +128,12 @@ int ble_door_open(void)
 		//蜂鸣器响几次(BEER_DIDI_NUMBER)
 		beep_didi(BEEP_DIDI_NUMBER);
 		//开锁
-//		moto_open(OPEN_TIME);
+		moto_open(OPEN_TIME);
 		nrf_delay_ms(DOOR_OPEN_HOLD_TIME * 100);
 		//蜂鸣器响
 		beep_didi(BEEP_DIDI_NUMBER);
 		//恢复moto状态
-//		moto_close(OPEN_TIME);
+		moto_close(OPEN_TIME);
 		goto exit;
 	}
 	else
@@ -141,12 +141,12 @@ int ble_door_open(void)
 		//蜂鸣器响几次(BEER_DIDI_NUMBER)
 		beep_didi(BEEP_DIDI_NUMBER);
 		//开锁
-//		moto_close(OPEN_TIME);
+		moto_close(OPEN_TIME);
 		nrf_delay_ms(DOOR_OPEN_HOLD_TIME * 100);
 		//蜂鸣器响
 		beep_didi(BEEP_DIDI_NUMBER);
 		//恢复moto状态
-//		moto_open(OPEN_TIME);
+		moto_open(OPEN_TIME);
 		goto exit;
 	}
 exit:

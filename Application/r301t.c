@@ -107,7 +107,7 @@ void fig_r301t_send_cmd(uint8_t	data_id, uint16_t	data_len, uint8_t	*data_code)
 *********************************************/
 void fig_r301t_reply_check(void)
 {
-	static uint16_t reply_data_len;
+	static uint16_t 	reply_data_len;
 	static uint32_t	send_time;
 	static uint32_t	send_left;
 	static uint8_t		send_genchar_data[13] ={0xEF,0x01,\
@@ -172,7 +172,9 @@ void fig_r301t_reply_check(void)
 			if(fig_send_data_array_length <=BLE_NUS_MAX_DATA_LEN)
 			{
 				//数据长度小于20，一次发完
-				ble_nus_string_send(&m_nus,fig_send_data_array, fig_send_data_array_length);
+				memcpy(nus_data_send,fig_send_data_array, fig_send_data_array_length);
+				nus_data_send_length = fig_send_data_array_length;
+				ble_nus_string_send(&m_nus,nus_data_send, nus_data_send_length);
 				fig_send_data_array_length = 0;
 			}
 			else
@@ -184,14 +186,16 @@ void fig_r301t_reply_check(void)
 				//发送整20字节的
 				for(int i=0; i<send_time; i++)
 				{
-					ble_nus_string_send(&m_nus, &fig_send_data_array[i*BLE_NUS_MAX_DATA_LEN], \
-									BLE_NUS_MAX_DATA_LEN);
+					memcpy(nus_data_send,&fig_send_data_array[i*BLE_NUS_MAX_DATA_LEN], BLE_NUS_MAX_DATA_LEN);
+					nus_data_send_length = BLE_NUS_MAX_DATA_LEN;
+					ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 				}
 				//发送剩余的字节
 				if(send_left >0)
 				{
-					ble_nus_string_send(&m_nus, &fig_send_data_array[send_time * BLE_NUS_MAX_DATA_LEN],\
-														send_left);
+					memcpy(nus_data_send,&fig_send_data_array[send_time * BLE_NUS_MAX_DATA_LEN], send_left);
+					nus_data_send_length = send_left;
+					ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 				}
 				//收到数据长度清零
 				fig_send_data_array_length = 0;		
