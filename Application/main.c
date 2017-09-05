@@ -177,6 +177,20 @@ int main(void)
 	
 	//初始化电机
 	moto_init();
+	//moto test
+	//HB设置为HL
+/*	nrf_gpio_pin_set(MOTO_FI);
+	nrf_gpio_pin_clear(MOTO_BI);
+	//延迟ms
+	nrf_delay_ms(5);
+	nrf_gpio_pin_set(MOTO_BI);
+			
+	//延迟5ms
+	nrf_delay_ms(5);
+	//设置为stand-by状态
+	nrf_gpio_pin_clear(MOTO_FI);
+	nrf_gpio_pin_clear(MOTO_BI);
+	*/
 	//初始化蜂鸣器
 	beep_init();
 	//初始化触摸屏
@@ -203,7 +217,7 @@ int main(void)
 		//判断命令
 		if(operate_code_setted ==true)
 		{
-			operate_code_check(nus_data_array, nus_data_array_length);
+			operate_code_check(nus_data_recieve, nus_data_recieve_length);
 			operate_code_setted = false;
 		}
     }

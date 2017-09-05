@@ -28,7 +28,7 @@
 #include "sm4_dpwd.h"
 #include "my_time.h"
 #include "operate_code.h"
-#include "fm260b.h"
+//#include "fm260b.h"
 #include "r301t.h"
 
 #define APP_GPIOTE_MAX_USERS				1
@@ -128,12 +128,12 @@ int ble_door_open(void)
 		//蜂鸣器响几次(BEER_DIDI_NUMBER)
 		beep_didi(BEEP_DIDI_NUMBER);
 		//开锁
-		moto_open(OPEN_TIME);
+//		moto_open(OPEN_TIME);
 		nrf_delay_ms(DOOR_OPEN_HOLD_TIME * 100);
 		//蜂鸣器响
 		beep_didi(BEEP_DIDI_NUMBER);
 		//恢复moto状态
-		moto_close(OPEN_TIME);
+//		moto_close(OPEN_TIME);
 		goto exit;
 	}
 	else
@@ -141,12 +141,12 @@ int ble_door_open(void)
 		//蜂鸣器响几次(BEER_DIDI_NUMBER)
 		beep_didi(BEEP_DIDI_NUMBER);
 		//开锁
-		moto_close(OPEN_TIME);
+//		moto_close(OPEN_TIME);
 		nrf_delay_ms(DOOR_OPEN_HOLD_TIME * 100);
 		//蜂鸣器响
 		beep_didi(BEEP_DIDI_NUMBER);
 		//恢复moto状态
-		moto_open(OPEN_TIME);
+//		moto_open(OPEN_TIME);
 		goto exit;
 	}
 exit:

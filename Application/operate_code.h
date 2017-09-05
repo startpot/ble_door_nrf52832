@@ -11,8 +11,8 @@
 
 extern struct key_store_struct 		key_store_struct_set;
 
-extern uint8_t			data_array_send[BLE_NUS_MAX_DATA_LEN];//20位
-extern uint32_t		data_send_length;//测试数据存储时，长度的全局变量
+extern uint8_t			nus_data_send[BLE_NUS_MAX_DATA_LEN];//20位,发送给蓝牙串口的数据
+extern uint32_t		nus_data_send_length;//测试数据存储时，长度的全局变量
 
 extern struct door_open_record			door_open_record_get;
 extern struct tm				time_record;

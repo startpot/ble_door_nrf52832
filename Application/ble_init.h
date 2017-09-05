@@ -77,8 +77,8 @@ extern uint8_t						device_name[DEVICE_NAME_SIZE];
 
 //以下3个变量是在uart service中保存的全局变量，交给operate_code_check函数去处理,蓝牙串口接收的数据
 extern bool								operate_code_setted;
-extern uint8_t							nus_data_array[BLE_NUS_MAX_DATA_LEN];
-extern uint16_t						nus_data_array_length;
+extern uint8_t							nus_data_recieve[BLE_NUS_MAX_DATA_LEN];
+extern uint16_t						nus_data_recieve_length;
 
 //指纹模块发送给蓝牙芯片的数据
 extern uint8_t							fig_send_data_array[UART_RX_BUF_SIZE];
