@@ -1,10 +1,10 @@
-/***********************************
-*	FI	BI	 fo 		bo			fun
-*	H		L			H			L				forward
-*	L		H			L			H				backward
-*	H		H			L			L				brake
-*	L		L			open	open		standby(stop)
-************************************/
+/*****************************************
+*	FI	BI		fo 	 bo		fun
+*	H	L		H	 L		forward
+*	L	H		L	 H		backward
+*	H	H		L	 L		brake
+*	L	L		open open	standby(stop)
+*******************************************/
 
 #include "moto.h"
 #include <stdio.h>
@@ -33,6 +33,7 @@ void moto_init(void)
 #if defined(BLE_DOOR_DEBUG)
 	printf("moto stand_by\r\n");
 #endif
+	
 }
 
 /**************************************************
@@ -53,6 +54,7 @@ static void moto_forward_ms(uint32_t ms)
 	//设置为stand-by状态
 	nrf_gpio_pin_clear(MOTO_FI);
 	nrf_gpio_pin_clear(MOTO_BI);
+
 }
 
 /***************************************************
@@ -73,6 +75,7 @@ static void moto_backward_ms(uint32_t ms)
 	//设置为stand-by状态
 	nrf_gpio_pin_clear(MOTO_FI);
 	nrf_gpio_pin_clear(MOTO_BI);
+
 }
 
 /************************************************************
@@ -82,6 +85,7 @@ static void moto_backward_ms(uint32_t ms)
 void moto_open(uint32_t open_time)
 {
 	moto_forward_ms(open_time*100);
+
 }
 
 /************************************************************
@@ -91,4 +95,5 @@ void moto_open(uint32_t open_time)
 void moto_close(uint32_t close_time)
 {
 	moto_backward_ms(close_time*100);
+
 }

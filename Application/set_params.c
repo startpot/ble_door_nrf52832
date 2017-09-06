@@ -19,16 +19,16 @@ uint8_t key_store_tmp[6];
 //种子的数组
 uint8_t seed[16];
 
-uint8_t 	KEY_LENGTH;
+uint8_t KEY_LENGTH;
 uint8_t	KEY_CHECK_NUMBER;
-uint8_t 	LED_LIGHT_TIME;
+uint8_t LED_LIGHT_TIME;
 
-uint32_t	OPEN_TIME;
-uint8_t	DOOR_OPEN_HOLD_TIME;
+uint32_t 	OPEN_TIME;
+uint8_t		DOOR_OPEN_HOLD_TIME;
 uint8_t 	BEEP_DIDI_NUMBER;
-uint8_t	VOL_VALUE;
-uint8_t	KEY_INPUT_USE_TIME;
-uint8_t	MOTO_DIR;
+uint8_t		VOL_VALUE;
+uint8_t		KEY_INPUT_USE_TIME;
+uint8_t		MOTO_DIR;
 
 
 //与设置mac有关的变量

@@ -22,6 +22,7 @@ void beep_init(void)
 #if defined(BLE_DOOR_DEBUG)
 	printf("beep status set low\r\n");
 #endif
+	
 }
 
 /*********************
@@ -32,6 +33,7 @@ static void	beep_didi_once(void)
 	nrf_gpio_pin_set(BEEP_IN_PIN);
 	nrf_delay_ms(BEEP_OPEN);
 	nrf_gpio_pin_clear(BEEP_IN_PIN);
+
 }
 
 /********************************************
@@ -48,4 +50,5 @@ void beep_didi(uint8_t number)
 	}
 	//恢复蜂鸣器状态
 	nrf_gpio_pin_clear(BEEP_IN_PIN);	
+
 }

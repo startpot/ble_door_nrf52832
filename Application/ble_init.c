@@ -32,30 +32,28 @@
 #include "beep.h"
 #include "led_button.h"
 
-dm_application_instance_t                  m_app_handle;
-dm_handle_t                                          m_dm_handle;
+dm_application_instance_t		m_app_handle;
+dm_handle_t                    	m_dm_handle;
 
-ble_uuid_t												m_adv_uuids[] = {{BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}};
+ble_uuid_t						m_adv_uuids[] = {{BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}};
 
-ble_nus_t												m_nus;//ble 服务注册的nus服务
-uint16_t													m_conn_handle = BLE_CONN_HANDLE_INVALID;
+ble_nus_t	m_nus;//ble 服务注册的nus服务
+uint16_t	m_conn_handle = BLE_CONN_HANDLE_INVALID;
 
-uint8_t					mac[8];//第一位：标志位，第二位：长度
-uint8_t					device_name[20];//[0]标记位0x77，[1]长度[2...]名字
+uint8_t		mac[8];//第一位：标志位，第二位：长度
+uint8_t		device_name[20];//[0]标记位0x77，[1]长度[2...]名字
 
 //自定义的nus服务中data_handle函数中暂存的数据，需要交给check命令
-bool						operate_code_setted = false;
-uint8_t					nus_data_recieve[BLE_NUS_MAX_DATA_LEN];
-uint16_t					nus_data_recieve_length;
+bool		operate_code_setted = false;
+uint8_t		nus_data_recieve[BLE_NUS_MAX_DATA_LEN];
+uint16_t	nus_data_recieve_length;
 
-uint8_t				nus_data_send[BLE_NUS_MAX_DATA_LEN];//20位,发送给上位机的
-uint32_t				nus_data_send_length = 0;
+uint8_t		nus_data_send[BLE_NUS_MAX_DATA_LEN];//20位,发送给上位机的
+uint32_t	nus_data_send_length = 0;
 
 //指纹模块发送给蓝牙芯片的数据
-uint8_t					fig_send_data_array[UART_RX_BUF_SIZE];
-uint16_t					fig_send_data_array_length = 0;
-
-
+uint8_t		fig_recieve_data[UART_RX_BUF_SIZE];
+uint16_t	fig_recieve_data_length = 0;
 
 
 void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
@@ -84,6 +82,7 @@ static void sec_req_timeout_handler(void * p_context)
             APP_ERROR_CHECK(err_code);
         }
     }
+
 }
 
 //因为广播函数是在后面定义的，使用的话，先定义
@@ -95,9 +94,9 @@ void advertising_init(void);
 static void ad_repeat_timeout_handler(void *p_context)
 {
 	UNUSED_PARAMETER(p_context);
-
 	//执行广播
 	advertising_init();
+
 }
 
 /*********************************
@@ -134,6 +133,7 @@ void application_timers_start(void)
 	uint32_t err_code;
     err_code = app_timer_start(m_ad_repeat_timer_id, AD_REPEAT_DELAY, NULL);
     APP_ERROR_CHECK(err_code);
+
 }
 
 void gap_params_init(void)
@@ -158,6 +158,7 @@ void gap_params_init(void)
 
     err_code = sd_ble_gap_ppcp_set(&gap_conn_params);
     APP_ERROR_CHECK(err_code);
+
 }
 
 /*************************************************
@@ -197,6 +198,7 @@ void services_init(void)
 
     err_code = ble_nus_init(&m_nus, &nus_init);
     APP_ERROR_CHECK(err_code);
+
 }
 
 /********************************************
@@ -211,6 +213,7 @@ static void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
         err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_CONN_INTERVAL_UNACCEPTABLE);
         APP_ERROR_CHECK(err_code);
     }
+
 }
 
 static void conn_params_error_handler(uint32_t nrf_error)
@@ -240,6 +243,7 @@ void conn_params_init(void)
 
     err_code = ble_conn_params_init(&cp_init);
     APP_ERROR_CHECK(err_code);
+
 }
 
 /***********************************
@@ -257,6 +261,7 @@ static void sleep_mode_enter(void)
     // Go to system-off mode (this function will not return; wakeup will cause a reset).
     err_code = sd_power_system_off();
     APP_ERROR_CHECK(err_code);
+
 }
 
 /************************************************
@@ -276,6 +281,7 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
         default:
             break;
     }
+
 }
 
 
@@ -284,7 +290,7 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
  ******************************/
 static void on_ble_evt(ble_evt_t * p_ble_evt)
 {
-    uint32_t                         err_code;
+    uint32_t	err_code;
 
     switch (p_ble_evt->header.evt_id)
     {
@@ -292,7 +298,7 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
  //           err_code = bsp_indication_set(BSP_INDICATE_CONNECTED);
  //           APP_ERROR_CHECK(err_code);
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
-            break;
+		break;
 
         case BLE_GAP_EVT_DISCONNECTED:
   //          err_code = bsp_indication_set(BSP_INDICATE_IDLE);
@@ -300,9 +306,9 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
 			//增加处理
 			dm_device_delete_all(&m_app_handle);
-            break;
+		break;
 
-		  case BLE_GAP_EVT_AUTH_STATUS:
+		case BLE_GAP_EVT_AUTH_STATUS:
 			//判断配对是否成功，如果不成功断开连接，从而阻止其他人任意连接
 			if(p_ble_evt->evt.gap_evt.params.auth_status.auth_status != BLE_GAP_SEC_STATUS_SUCCESS)
 			{
@@ -314,7 +320,7 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
 				printf("pair success\r\n");
 #endif
 			}
-			break;
+		break;
 
 /*
         case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
@@ -327,14 +333,14 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
             // No system attributes have been stored.
             err_code = sd_ble_gatts_sys_attr_set(m_conn_handle, NULL, 0, 0);
             APP_ERROR_CHECK(err_code);
-            break;
+		break;
 
         default:
             // No implementation needed.
-            break;
+		break;
     }
+	
 }
-
 
 /************************
 *BLE事件分发
@@ -398,6 +404,7 @@ void ble_stack_init(void)
 	// Register with the SoftDevice handler module for BLE events.
     err_code = softdevice_sys_evt_handler_set(sys_evt_dispatch);
     APP_ERROR_CHECK(err_code);
+
 }
 
 /***********************************************************
@@ -411,29 +418,30 @@ static void uart_event_handle(app_uart_evt_t * p_event)
     switch (p_event->evt_type)
     {
         case APP_UART_DATA_READY:
-            UNUSED_VARIABLE(app_uart_get(&fig_send_data_array[fig_send_data_array_length]));
-            fig_send_data_array_length++;
+            UNUSED_VARIABLE(app_uart_get(&fig_recieve_data[fig_recieve_data_length]));
+            fig_recieve_data_length++;
 			//指纹模板的应答包分析
 		//	fig_fm260b_reply_check();	//指纹模块fm260b
 			
 			//收到的数据包长度至少12位
-			if(fig_send_data_array_length >11)
+			if(fig_recieve_data_length >11)
 			{	//指纹模块r301t
 				fig_r301t_reply_check();
 			}
-            break;
+		break;
 
         case APP_UART_COMMUNICATION_ERROR:
             APP_ERROR_HANDLER(p_event->data.error_communication);
-            break;
+		break;
 
         case APP_UART_FIFO_ERROR:
             APP_ERROR_HANDLER(p_event->data.error_code);
-            break;
+		break;
 
         default:
-            break;
+		break;
     }
+	
 }
 
 /*****************************
@@ -460,8 +468,8 @@ void uart_init(void)
                        APP_IRQ_PRIORITY_LOW,
                        err_code);
     APP_ERROR_CHECK(err_code);
-}
 
+}
 
 void advertising_init(void)
 {
@@ -486,6 +494,7 @@ void advertising_init(void)
 
     err_code = ble_advertising_init(&advdata, &scanrsp, &options, on_adv_evt, NULL);
     APP_ERROR_CHECK(err_code);
+
 }
 
 
@@ -496,7 +505,7 @@ static void bsp_event_handler(bsp_event_t event)
     {
         case BSP_EVENT_SLEEP:
             sleep_mode_enter();
-            break;
+		break;
 
         case BSP_EVENT_DISCONNECT:
             err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
@@ -504,7 +513,7 @@ static void bsp_event_handler(bsp_event_t event)
             {
                 APP_ERROR_CHECK(err_code);
             }
-            break;
+		break;
 
         case BSP_EVENT_WHITELIST_OFF:
             err_code = ble_advertising_restart_without_whitelist();
@@ -512,11 +521,12 @@ static void bsp_event_handler(bsp_event_t event)
             {
                 APP_ERROR_CHECK(err_code);
             }
-            break;
+		break;
 
         default:
-            break;
+		break;
     }
+	
 }
 
 void buttons_leds_init(bool * p_erase_bonds)
@@ -532,6 +542,7 @@ void buttons_leds_init(bool * p_erase_bonds)
     APP_ERROR_CHECK(err_code);
 
     *p_erase_bonds = (startup_event == BSP_EVENT_CLEAR_BONDING_DATA);
+
 }
 
 
@@ -565,28 +576,28 @@ static uint32_t device_manager_evt_handler(dm_handle_t const * p_handle,
                 err_code = app_timer_start(m_sec_req_timer_id, SECURITY_REQUEST_DELAY, NULL);
                 APP_ERROR_CHECK(err_code);
             }
-            break;
+		break;
 		case DM_EVT_DISCONNECTION:
 		//	dm_device_delete_all(&m_app_handle);
-			break;
+		break;
 		case DM_EVT_SECURITY_SETUP:
 
-			break;
+		break;
 		case DM_EVT_SECURITY_SETUP_COMPLETE:
 
-			break;
+		break;
 		case DM_EVT_SERVICE_CONTEXT_DELETED:
 		//	if(m_conn_handle != BLE_CONN_HANDLE_INVALID)
 		//	{
 		//		sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
 		//	}
-			break;
+		break;
 		case DM_EVT_LINK_SECURED:
-			break;
-
-        default:
-            break;
-    }
+		
+		break;
+		default:
+		break;
+	}
 
 #ifdef BLE_DFU_APP_SUPPORT
 	if(p_event->event_id == DM_EVT_LINK_SECURED)
@@ -595,6 +606,7 @@ static uint32_t device_manager_evt_handler(dm_handle_t const * p_handle,
 	}
 #endif	//BLE_DFU_APP_SUPPORT
     return NRF_SUCCESS;
+
 }
 
 
@@ -624,4 +636,5 @@ void device_manager_init(bool erase_bonds)
 
     err_code = dm_register(&m_app_handle, &register_param);
     APP_ERROR_CHECK(err_code);
+
 }

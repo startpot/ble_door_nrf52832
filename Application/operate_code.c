@@ -50,7 +50,7 @@ static int cmd_set_key(uint8_t *p_data, uint16_t length)
 		time_get_t = my_mktime(&time_get);
 	}
 			
-	//先进行现存密码的比对
+	//1、先进行现存密码的比对
 	//获取普通密码的个数,小端字节
 	inter_flash_read(flash_read_data, BLOCK_STORE_SIZE, KEY_STORE_OFFSET, &block_id_flash_store);
 	memcpy(&key_store_length,flash_read_data, sizeof(struct key_store_length_struct));
@@ -64,7 +64,7 @@ static int cmd_set_key(uint8_t *p_data, uint16_t length)
 		key_store_length_get = key_store_length.key_store_length;
 	}
 	if(key_store_length_get >0)
-	{
+	{//先进行已存储的密码对比
 		for(int i=0; i<key_store_length_get; i++)
 		{
 			//获取存储的密码
@@ -93,59 +93,59 @@ static int cmd_set_key(uint8_t *p_data, uint16_t length)
 		}
 	}	
 		
-			//获取种子
-			inter_flash_read(flash_read_data, BLOCK_STORE_SIZE, SEED_OFFSET, &block_id_flash_store);
-	//		memset(seed, 0, 16);
-			if(flash_read_data[0] == 0x77)
-			{//设置了种子
-				//获取种子
-				memcpy(seed, &flash_read_data[1], 16);
+	//2、获取种子，进行动态密码对比，对比SET_KEY_CHECK_NUMBER次
+	inter_flash_read(flash_read_data, BLOCK_STORE_SIZE, SEED_OFFSET, &block_id_flash_store);
+	if(flash_read_data[0] == 0x77)
+	{//设置了种子
+		//获取种子
+		memset(seed, 0, 16);
+		memcpy(seed, &flash_read_data[1], 16);
 		
-			//对比SET_KEY_CHECK_NUMBER次设置的密码
-			for(int i=0; i<SET_KEY_CHECK_NUMBER; i++)
-			{
-				SM4_DPasswd(seed, time_get_t, SM4_INTERVAL, SM4_COUNTER, SM4_challenge, key_store_tmp);
+		//对比SET_KEY_CHECK_NUMBER次设置的密码
+		for(int i=0; i<SET_KEY_CHECK_NUMBER; i++)
+		{
+			SM4_DPasswd(seed, time_get_t, SM4_INTERVAL, SM4_COUNTER, SM4_challenge, key_store_tmp);
 
-				if(strncasecmp((char *)p_data, (char *)key_store_tmp, KEY_LENGTH) == 0)
-				{//设置的密码相同
+			if(strncasecmp((char *)p_data, (char *)key_store_tmp, KEY_LENGTH) == 0)
+			{//设置的密码相同
 
-					//组织密码结构体
-					memset(&key_store_struct_set, 0 , sizeof(struct key_store_struct));
-					//写密码
-					memcpy(&key_store_struct_set.key_store, p_data, 6);
-					//写有效时间
-					memcpy(&key_store_struct_set.key_use_time, &p_data[6], 2);
-					//写控制字
-					memcpy(&key_store_struct_set.control_bits, &p_data[8], 1);
-					//写版本号
-					memcpy(&key_store_struct_set.key_vesion, &p_data[9], 1);
-					//写存入时间
-					memcpy(&key_store_struct_set.key_store_time, &time_get_t, sizeof(time_t));
+				//组织密码结构体
+				memset(&key_store_struct_set, 0 , sizeof(struct key_store_struct));
+				//写密码
+				memcpy(&key_store_struct_set.key_store, p_data, 6);
+				//写有效时间
+				memcpy(&key_store_struct_set.key_use_time, &p_data[6], 2);
+				//写控制字
+				memcpy(&key_store_struct_set.control_bits, &p_data[8], 1);
+				//写版本号
+				memcpy(&key_store_struct_set.key_vesion, &p_data[9], 1);
+				//写存入时间
+				memcpy(&key_store_struct_set.key_store_time, &time_get_t, sizeof(time_t));
 	
-					//直接将钥匙记录到flash
-					key_store_write(&key_store_struct_set);
+				//直接将钥匙记录到flash
+				key_store_write(&key_store_struct_set);
 #if defined(BLE_DOOR_DEBUG)
 					printf("key set success\r\n");
 #endif
-					//开门
-					ble_door_open();
-					//记录开门
-					memset(&open_record_now, 0, sizeof(struct door_open_record));
-					memcpy(&open_record_now.key_store, p_data, 6);
-					memcpy(&open_record_now.door_open_time, &time_get_t, sizeof(time_t));
-					record_write(&open_record_now);
+				//开门
+				ble_door_open();
+				//记录开门
+				memset(&open_record_now, 0, sizeof(struct door_open_record));
+				memcpy(&open_record_now.key_store, p_data, 6);
+				memcpy(&open_record_now.door_open_time, &time_get_t, sizeof(time_t));
+				record_write(&open_record_now);
 					
-					goto key_set_exit;
-				}
-				else
-				{
-					time_get_t = time_get_t - 60;
-				}
+				goto key_set_exit;
+			}
+			else
+			{
+				time_get_t = time_get_t - 60;
 			}
 		}
+	}
 key_set_exit:
-	
 	return 0;
+	
 }
 
 /********************************************
@@ -174,6 +174,7 @@ static void sync_rtc_time(uint8_t *p_data, uint16_t length)
 		nus_data_send_length = length;
 		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 	}
+	
 }
 
 /********************************************
@@ -199,6 +200,7 @@ static void get_rtc_time(uint8_t *p_data, uint16_t length)
 		nus_data_send_length = 8;
 		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 	}
+	
 }
 
 /*************************************************
@@ -212,28 +214,29 @@ static void get_key_now(uint8_t *p_data, uint16_t length)
 	err_code = rtc_time_read(&time_get);
 	if(err_code == NRF_SUCCESS)
 	{
-	//将时间变换为64位
-	time_get_t = my_mktime(&time_get);
-	//获取种子
-	inter_flash_read(flash_read_data, 32, SEED_OFFSET, &block_id_flash_store);
-	memset(seed, 0, 16);
+		//将时间变换为64位
+		time_get_t = my_mktime(&time_get);
+		//获取种子
+		inter_flash_read(flash_read_data, 32, SEED_OFFSET, &block_id_flash_store);
 		if(flash_read_data[0] == 0x77)
 		{//设置了种子
-		//获取种子
-		memcpy(seed, &flash_read_data[1], 16);
-		//计算动态密码
-		SM4_DPasswd(seed, time_get_t, SM4_INTERVAL, SM4_COUNTER, SM4_challenge, key_store_tmp);
-		//整合返回包
-		nus_data_send[0] = p_data[0] + 0x40;
-		memcpy(&nus_data_send[1], &key_store_tmp, 6);
-		nus_data_send_length = KEY_LENGTH + 1;
-		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+			//获取种子
+			memset(seed, 0, 16);
+			memcpy(seed, &flash_read_data[1], 16);
+			//计算动态密码
+			SM4_DPasswd(seed, time_get_t, SM4_INTERVAL, SM4_COUNTER, SM4_challenge, key_store_tmp);
+			//整合返回包
+			nus_data_send[0] = p_data[0] + 0x40;
+			memcpy(&nus_data_send[1], &key_store_tmp, 6);
+			nus_data_send_length = KEY_LENGTH + 1;
+			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 		}
 		else
 		{//无种子，则发送no seed
 			ble_nus_string_send(&m_nus, (uint8_t *)no_seed, strlen(no_seed));
 		}	
 	}
+	
 }
 
 /*****************************************
@@ -268,6 +271,7 @@ static void set_param(uint8_t *p_data, uint16_t length)
 	memcpy(&nus_data_send[1], &p_data[1], (length -1) );
 	nus_data_send_length = length;
 	ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+	
 }
 
 /**********************************************
@@ -290,6 +294,7 @@ static void set_key_seed(uint8_t *p_data, uint16_t length)
 	memcpy(&nus_data_send[1], &p_data[1], (length -1));
 	nus_data_send_length = length;
 	ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+	
 }
 
 /***********************************************
@@ -326,6 +331,7 @@ static void set_mac(uint8_t *p_data, uint16_t length)
 		//向手机发送失败信息"set mac fail"
 		ble_nus_string_send(&m_nus, (uint8_t *)set_fail, strlen(set_fail) );
 	}
+	
 }
 
 /*************************************************
@@ -338,6 +344,7 @@ static void set_super_key(uint8_t *p_data, uint16_t length)
 	flash_write_data[0] = 0x77;//'w'
 	//超级密码就12位，取写入数据前面16位(16>(1+12))
 	write_super_key(flash_write_data,16);
+	
 }
 
 /*****************************************
@@ -378,6 +385,7 @@ static void get_used_key(uint8_t *p_data, uint16_t length)
 			ble_nus_string_send(&m_nus, nus_data_send, sizeof(struct key_store_struct)+3);
 		}
 	}
+	
 }
 
 /***************************************
@@ -396,14 +404,15 @@ static void get_record_number(uint8_t *p_data, uint16_t length)
 	{//记录满
 		record_length_get = RECORD_NUMBER;
 		memcpy(&nus_data_send[1], &record_length_get,4);
-		}
-		else
-		{
+	}
+	else
+	{
 		memcpy(&nus_data_send[1], &record_length.record_length,4);
-		}
-		//发送应答包
-		nus_data_send_length = 5;
-		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+	}
+	//发送应答包
+	nus_data_send_length = 5;
+	ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+	
 }
 
 /****************************************
@@ -470,6 +479,7 @@ static void get_recent_record(uint8_t *p_data, uint16_t length)
 	{//无记录，发送no record
 		ble_nus_string_send(&m_nus, (uint8_t *)no_record, strlen(no_record) );
 	}
+	
 }
 
 /*******************************************************
@@ -478,19 +488,20 @@ static void get_recent_record(uint8_t *p_data, uint16_t length)
 static void send_fig_fm260b_cmd(uint8_t *p_data, uint16_t length)
 {
 	//获取第一参数和第二参数,两字节，大端
-	fig_param_first = p_data[3] *256 + p_data[4];
-	fig_param_second = p_data[5] *256 + p_data[6];
+	dr_fig_param_first = p_data[3] *256 + p_data[4];
+	dr_fig_param_second = p_data[5] *256 + p_data[6];
 	//将获取的指令发送给指纹模块
 	for (uint32_t i = 0; i < length; i++)
 	{
 		while(app_uart_put(p_data[i]) != NRF_SUCCESS);
 	}
 	
-	if(p_data[2] == 0x20)//自动注册模块指令
+	if(p_data[2] == DR_FIG_CMD_AUTOSEARCH)//自动注册模块指令
 	{
 		//设置自动注册状态位
-		is_autoenroll = true;
+		is_fm260b_autoenroll = true;
 	}
+	
 }
 
 /***********************************************************
@@ -498,8 +509,9 @@ static void send_fig_fm260b_cmd(uint8_t *p_data, uint16_t length)
 ***********************************************************/
 static void send_fig_r301t_cmd(uint8_t *p_data, uint16_t length)
 {
-	static uint8_t fig_r301t_autoenroll_reply[12]={0xEF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF,\
-																				  0x07, 0x00, 0x03, 0x00, 0x00, 0x0A};
+	static uint8_t fig_r301t_autoenroll_reply[12]= {0xEF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF,\
+													0x07, 0x00, 0x03, 0x00, \
+													0x00, 0x0A};
 	//判断是不是自动注册命令
 	if(p_data[GR_FIG_DATA_ID_SITE] == GR_FIG_DATA_ID_CMD && \
 		p_data[GR_FIG_CMD_SITE]==GR_FIG_CMD_AUTOENROLL)
@@ -526,6 +538,7 @@ static void send_fig_r301t_cmd(uint8_t *p_data, uint16_t length)
 			is_r301t_autoenroll = false;
 		}
 	}
+	
 }
 
 /************************************************************
@@ -628,5 +641,6 @@ void operate_code_check(uint8_t *p_data, uint16_t length)
 		default:
 		
 		break;
-	}	
+	}
+	
 }

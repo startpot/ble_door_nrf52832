@@ -21,15 +21,15 @@ extern pstorage_handle_t block_id_params;
 extern uint8_t flash_store_params[8];
 
 extern uint8_t 	KEY_LENGTH;
-extern uint8_t		KEY_CHECK_NUMBER;
+extern uint8_t	KEY_CHECK_NUMBER;
 extern uint8_t 	LED_LIGHT_TIME;
 
 extern uint32_t	OPEN_TIME;
-extern uint8_t		DOOR_OPEN_HOLD_TIME;
+extern uint8_t	DOOR_OPEN_HOLD_TIME;
 extern uint8_t 	BEEP_DIDI_NUMBER;
-extern uint8_t		VOL_VALUE;
-extern uint8_t		KEY_INPUT_USE_TIME;
-extern uint8_t		MOTO_DIR;
+extern uint8_t	VOL_VALUE;
+extern uint8_t	KEY_INPUT_USE_TIME;
+extern uint8_t	MOTO_DIR;
 
 extern ble_gap_addr_t addr;
 

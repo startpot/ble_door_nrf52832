@@ -1,6 +1,6 @@
 /****************************************************************************
 *	RTC芯片 IIC接口
-*--------------------------------------------------------------------------------------
+*----------------------------------------------------------------------------
 *	tm														RTC							
 *	tm_sec(int:0-60)							02H(BCD:0-59:[6:0])
 *	tm_min(int:0-59)							03H(BCD:0-59:[6:0])
@@ -56,13 +56,14 @@ static ret_code_t rtc_iic_init(void)
         nrf_drv_twi_enable(&m_twi_master_rtc);
     }while(0);
     return ret;
+
 }
 
 /**********************************************************
 *RTC芯片写入1个byte
 *in：	address			要写入RTC芯片的地址
-			data				写入RTC芯片的数据
-*out：	ret					0成功
+		data			写入RTC芯片的数据
+*out：	ret				0成功
 **********************************************************/
 static ret_code_t rtc_i2c_device_write_byte(uint8_t address, uint8_t data)
 {
@@ -70,14 +71,15 @@ static ret_code_t rtc_i2c_device_write_byte(uint8_t address, uint8_t data)
 	uint8_t buffer[2] ={address,data};
 	ret = nrf_drv_twi_tx(&m_twi_master_rtc, RTC_CHIP_REAL_ADDR, buffer, 2, false);
 	return ret;
+	
 }
 
 /****************************************************************
 *RTC芯片读出length个byte
-*in：		address				要读出的地址
-				*p_read_byte	读出数据的指针
-				length					读出数据的长度
-*out			ret						0成功
+*in：		address			要读出的地址
+			*p_read_byte	读出数据的指针
+			length			读出数据的长度
+*out		ret				0成功
 ****************************************************************/
 static ret_code_t rtc_i2c_device_read_byte(uint8_t address, uint8_t *p_read_byte, uint8_t length)
 {
@@ -97,6 +99,7 @@ static ret_code_t rtc_i2c_device_read_byte(uint8_t address, uint8_t *p_read_byte
 	ret = nrf_drv_twi_rx(&m_twi_master_rtc, RTC_CHIP_REAL_ADDR, p_read_byte, length);
 	}while(0);
 	return ret;
+	
 }
 
 /*******************************************************
@@ -114,26 +117,29 @@ void rtc_init(void)
 #if defined(BLE_DOOR_DEBUG)
 	printf("rtc:pcf85163 init success\r\n");
 #endif
+	
 }
 
 /*****************************************
 *hex变换为BCD
 *in：		value			要变换的hex
-*out：							变换后的BCD
+*out：						变换后的BCD
 *****************************************/
 static uint8_t hex_2_bcd(uint8_t value)
 {
 	return (((value/10)<<4) | (value%10));
+
 }
 
 /****************************************************
 *BCD变换为hex
 *in：		value		要变换的BCD
-*out：						变换后的hex
+*out：					变换后的hex
 *****************************************************/
 static uint8_t bcd_2_hex(uint8_t value)
 {
 	return (((value & 0xf0)>>4)*10 + (value & 0x0f));
+
 }
 
 /******************************************************
@@ -143,7 +149,6 @@ static uint8_t bcd_2_hex(uint8_t value)
 *******************************************************/
 uint8_t	rtc_time_write(struct tm *time_write)
 {
-	
 	uint8_t byte_write;
 	//停止RTC
 	rtc_i2c_device_write_byte(PCF85163_Timer_control_ADDR, 0x03);
@@ -179,6 +184,7 @@ uint8_t	rtc_time_write(struct tm *time_write)
 #endif
 */
 	return 0;
+
 }
 
 /********************************************************
@@ -215,4 +221,5 @@ uint8_t rtc_time_read(struct tm *time_read)
 #endif
 */
 	return 0;
+
 }

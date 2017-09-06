@@ -31,27 +31,27 @@
 //#include "fm260b.h"
 #include "r301t.h"
 
-#define APP_GPIOTE_MAX_USERS				1
+#define APP_GPIOTE_MAX_USERS		1
 
-app_gpiote_user_id_t								m_app_gpiote_id;
+app_gpiote_user_id_t				m_app_gpiote_id;
 
 char			key_express_value;
 
 //输入按键值，当作输入密码
-char			key_input[KEY_NUMBER];
+char		key_input[KEY_NUMBER];
 uint8_t		key_input_site;
 
 //输入的密码的时间
-struct			tm key_input_time_tm;
-time_t			key_input_time_t;
+struct		tm key_input_time_tm;
+time_t		key_input_time_t;
 
-struct key_store_struct				key_store_check;
+struct key_store_struct			key_store_check;
 
 //存储在flash的密码
 uint8_t			flash_key_store[BLOCK_STORE_SIZE];
 
 ///开锁记录全局变量
-struct door_open_record			open_record_now;
+struct door_open_record		open_record_now;
 
 /***********************************************
  *初始化LED pins
@@ -66,14 +66,12 @@ void leds_init(void)
 	{
 		nrf_gpio_cfg_output( led_list[pin] );
 		nrf_gpio_pin_set( led_list[pin] );
-		//LED TEST
-	//	nrf_gpio_pin_clear( led_list[pin] );
-	//	nrf_gpio_pin_set( led_list[pin] );
 	}
 	
 #if defined(BLE_DOOR_DEBUG)	
 	printf("all leds not lit\r\n");
 #endif
+
 }
 
 /***********************************************
@@ -90,6 +88,7 @@ void leds_on(uint8_t led_pin, uint32_t ms)
 		nrf_delay_ms(ms*100);
 		nrf_gpio_pin_set(led_pin);
 	}
+
 }
 
 /************************************************
@@ -102,6 +101,7 @@ static void write_key_expressed(void)
 		key_input[key_input_site] = key_express_value;
 		key_input_site ++;
 	}
+
 }
 
 /***********************************************
@@ -114,6 +114,7 @@ static void clear_key_expressed(void)
 		key_input[i] = 0x0;
 	}
 	key_input_site = 0x0;
+
 }
 
 /***********************************************
@@ -151,6 +152,7 @@ int ble_door_open(void)
 	}
 exit:
 	return 0;
+
 }
 
 /**************************************************************
@@ -237,10 +239,10 @@ static void check_keys(void)
 			//计算KEY_CHECK_NUMBER 次数
 			for(int i = 0; i<(KEY_CHECK_NUMBER );i++)
 			{
-				SM4_DPasswd(seed, key_input_time_t, SM4_INTERVAL, SM4_COUNTER, SM4_challenge, key_store_tmp);
+				SM4_DPasswd(seed, key_input_time_t, SM4_INTERVAL, SM4_COUNTER, \
+								SM4_challenge, key_store_tmp);
 				if(strncasecmp(key_input, (char *)key_store_tmp, KEY_LENGTH) == 0)
-				{//密码相同
-										
+				{//密码相同		
 					//记录密码
 					//组织密码结构体
 					memset(&key_store_struct_set, 0 , sizeof(struct key_store_struct));
@@ -286,6 +288,7 @@ clear_keys_input:
 #if defined(BLE_DOOR_DEBUG)
 	printf("clear all express button\r\n");
 #endif
+
 }
 
 /*****************************************
@@ -296,15 +299,14 @@ clear_keys_input:
 
 static void check_key_express(char express_value)
 {
-
-	static uint8_t board_leds[LEDS_NUMBER-1] =	{LED_1, LED_3, LED_5,\
-																						 LED_7, LED_10, LED_11,\
-																						 LED_2, LED_4, LED_6,\
-																						 LED_8, LED_9, LED_12};
-	static char board_buttons[LEDS_NUMBER-1] =	{'1', '2', '3',\
-																						  '4', '5', '6',\
-																						  '7', '8', '9',\
-																						   'a','0','b'};
+	static uint8_t board_leds[LEDS_NUMBER-1] = {LED_1, LED_3, LED_5,\
+												LED_7, LED_10, LED_11,\
+												LED_2, LED_4, LED_6,\
+												LED_8, LED_9, LED_12};
+	static char board_buttons[LEDS_NUMBER-1] = {'1', '2', '3',\
+												'4', '5', '6',\
+												'7', '8', '9',\
+												'a', '0', 'b'};
 	
 	//判断按键，亮相应的灯
 	for(int i=0; i< (LEDS_NUMBER-1); i++)
@@ -323,16 +325,16 @@ static void check_key_express(char express_value)
 	{
 		write_key_expressed();
 	}
+
 }
 
 /**************************************************************
 *触摸屏中断和指纹中断处理函数
 *in：	event_pins_low_to_high	状态由低到高的引脚
-*			event_pins_high_to_low	状态由高到低的引脚
+*		event_pins_high_to_low	状态由高到低的引脚
 **************************************************************/
 static void touch_finger_int_handler(uint32_t event_pins_low_to_high, uint32_t event_pins_high_to_low)
 {
-	
 	if (event_pins_high_to_low & (1 << TOUCH_IIC_INT_PIN))
 	{
 		//触摸中断由高变低
@@ -342,7 +344,7 @@ static void touch_finger_int_handler(uint32_t event_pins_low_to_high, uint32_t e
 	if (event_pins_high_to_low & (1 << FIG_WAKE_N_PIN))
 	{
 		/*//指纹中断由高变低,自动化过程，判断如果不是上位机设置的注册模式，发送自动搜索
-		if(  is_autoenroll == false )
+		if(  is_fm260b_autoenroll == false )
 		{
 			//未处在自动注册状态，发送自动搜索模板功能
 			fig_fm260b_send_autosearch();
@@ -357,6 +359,7 @@ static void touch_finger_int_handler(uint32_t event_pins_low_to_high, uint32_t e
 		r301t_autosearch_step = 1;
 		}
 	}
+
 }
 
 /***************************************************************
@@ -378,11 +381,11 @@ void touch_finger_int_init(void)
 	// Configure IIC_INT_PIN with SENSE enabled
 	nrf_gpio_cfg_sense_input(TOUCH_IIC_INT_PIN, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
     
-	APP_GPIOTE_INIT(APP_GPIOTE_MAX_USERS);   
+	APP_GPIOTE_INIT(APP_GPIOTE_MAX_USERS);
   
-	err_code = app_gpiote_user_register(&m_app_gpiote_id, 
-                                        low_to_high_bitmask, 
-                                        high_to_low_bitmask, 
+	err_code = app_gpiote_user_register(&m_app_gpiote_id,\
+                                        low_to_high_bitmask,\
+                                        high_to_low_bitmask, \
                                         touch_finger_int_handler);
 	APP_ERROR_CHECK(err_code);
     
@@ -391,4 +394,5 @@ void touch_finger_int_init(void)
 #if defined(BLE_DOOR_DEBUG)
 	printf("touch button int init success\r\n");
 #endif
+
 }

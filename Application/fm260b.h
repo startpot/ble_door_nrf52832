@@ -30,46 +30,46 @@
 #include <stdint.h>
 
 
-//上电后，系统发送准备好的码
-#define READY_CODE		0x55
+//上电后，系统发送准备好的码 DR:导纳电子
+#define DR_READY_CODE		0x55
 
 
 //包头、地址
-#define	FIG_START			0x1B
-#define	FIG_ADDER			0xFF
+#define	DR_FIG_START			0x1B
+#define	DR_FIG_ADDER			0xFF
 //命令包指令码
-#define	FIG_CMD_SETSYS				0x00
-#define	FIG_CMD_READINFO			0x01
-#define	FIG_CMD_AUTOENROLL		0x20
-#define	FIG_CMD_AUTOSEARCH	0x22
-#define	FIG_CMD_DELETE				0x1C
+#define	DR_FIG_CMD_SETSYS		0x00
+#define	DR_FIG_CMD_READINFO		0x01
+#define	DR_FIG_CMD_AUTOENROLL	0x20
+#define	DR_FIG_CMD_AUTOSEARCH	0x22
+#define	DR_FIG_CMD_DELETE		0x1C
 
 //应答包的数据位置
-#define FIG_R_CMD_CODE_SITE			1  //bit1
-#define FIG_R_RESULT_CODE_SITE 	2  //bit2
-#define FIG_R_PARAM_LEN_SITE			3  //bit3
+#define DR_FIG_R_CMD_CODE_SITE		1  //bit1
+#define DR_FIG_R_RESULT_CODE_SITE 	2  //bit2
+#define DR_FIG_R_PARAM_LEN_SITE		3  //bit3
 
 //正确命令包的应答结果码
-#define	FIG_R_EXE			0x00
+#define	DR_FIG_R_EXE			0x00
 
-#define	FIG_R_FINISH_TRUE			0x01
-#define	FIG_R_FINISH_FALSE		0x02
+#define	DR_FIG_R_FINISH_TRUE	0x01
+#define	DR_FIG_R_FINISH_FALSE	0x02
 
-#define	FIG_R_FIG_MOVE				0x05
-#define	FIG_R_FIG_TOUCH			0x06
+#define	DR_FIG_R_FIG_MOVE		0x05
+#define	DR_FIG_R_FIG_TOUCH		0x06
 
 //错误命令包的应答结果码
-#define	FIG_R_CMD_WRONG		0x40
-#define	FIG_R_PARAM_WRONG	0x41
-#define	FIG_R_SUM_WRONG		0x42
+#define	DR_FIG_R_CMD_WRONG		0x40
+#define	DR_FIG_R_PARAM_WRONG	0x41
+#define	DR_FIG_R_SUM_WRONG		0x42
 
 
 extern bool		fig_status;
 extern bool		exe_result;
-extern bool		is_autoenroll;
+extern bool		is_fm260b_autoenroll;
 
-extern uint16_t	fig_param_first ;
-extern uint16_t	fig_param_second ;
+extern uint16_t	dr_fig_param_first ;
+extern uint16_t	dr_fig_param_second ;
 
 void fig_fm260b_send_autosearch(void);
 void fig_fm260b_reply_check(void);
