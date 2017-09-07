@@ -115,7 +115,7 @@ static void set_mac_from_interflash(void)
 			printf(" use mac setted by user:");
 			for(int i=0; i<6;i++)
 			{
-				printf("%x ",mac[3+i]);
+				printf("%x ",mac[2+i]);
 			}
 			printf("\r\n");
 #endif

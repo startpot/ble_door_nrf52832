@@ -36,6 +36,7 @@ time_t						time_get_t;
 uint32_t					record_length_get;
 uint32_t					key_store_length_get;
 
+bool		is_superkey_checked = false;
 
 /***********************************
 *	设置开锁密码命令
@@ -43,6 +44,7 @@ uint32_t					key_store_length_get;
 static int cmd_set_key(uint8_t *p_data, uint16_t length)
 {
 	uint32_t err_code;
+	
 	//获取收到的时间
 	err_code = rtc_time_read(&time_get);
 	if(err_code == NRF_SUCCESS)
@@ -69,14 +71,13 @@ static int cmd_set_key(uint8_t *p_data, uint16_t length)
 		{
 			//获取存储的密码
 			inter_flash_read((uint8_t *)&key_store_check, sizeof(struct key_store_struct), \
-													(KEY_STORE_OFFSET + 1 + i), &block_id_flash_store);
+												(KEY_STORE_OFFSET + 1 + i), &block_id_flash_store);
 			//对比密码是否一致
 			if(strncasecmp((char *)nus_data_recieve, (char *)&key_store_check.key_store, 6) == 0)
-			{//密码相同，看是否在有效时间内
+			{//密码相同，看是否在有效时间内，以1分钟为单位
 				if((double)(my_difftime(time_get_t, key_store_check.key_store_time) <\
-								((double)key_store_check.key_use_time * 60)) )
-					{
-	
+							((double)key_store_check.key_use_time * 60)) )
+				{
 					ble_door_open();
 #if defined(BLE_DOOR_DEBUG)
 					printf("it is a dynamic key user set\r\n");
@@ -125,7 +126,7 @@ static int cmd_set_key(uint8_t *p_data, uint16_t length)
 				//直接将钥匙记录到flash
 				key_store_write(&key_store_struct_set);
 #if defined(BLE_DOOR_DEBUG)
-					printf("key set success\r\n");
+				printf("key set success\r\n");
 #endif
 				//开门
 				ble_door_open();
@@ -143,8 +144,9 @@ static int cmd_set_key(uint8_t *p_data, uint16_t length)
 			}
 		}
 	}
+		
 key_set_exit:
-	return 0;
+		return 0;
 	
 }
 
@@ -155,24 +157,27 @@ key_set_exit:
 static void sync_rtc_time(uint8_t *p_data, uint16_t length)
 {
 	uint32_t err_code;
-	//是对时命令,[year0][year1][mon][day][hour][min][sec]
-	time_set.tm_sec = (int)p_data[7];
-	time_set.tm_min = (int)p_data[6];
-	time_set.tm_hour = (int)p_data[5];
-	time_set.tm_mday = (int)p_data[4];
-	time_set.tm_mon = (int)p_data[3];
-	//年小端
-	time_set.tm_year = (int)((((int)p_data[2])<<8 | (int)p_data[1]) - 1990);
-		
-	//将时间写入RTC
-	err_code =  rtc_time_write(&time_set);
-	if(err_code ==NRF_SUCCESS)
+	if(is_superkey_checked == true)//如果验证了超级密码
 	{
-		//将命令加上0x40,返回给app
-		nus_data_send[0] = p_data[0] + 0x40;
-		memcpy(&nus_data_send[1], &p_data[1], (length -1));
-		nus_data_send_length = length;
-		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+		//是对时命令,[year0][year1][mon][day][hour][min][sec]
+		time_set.tm_sec = (int)p_data[7];
+		time_set.tm_min = (int)p_data[6];
+		time_set.tm_hour = (int)p_data[5];
+		time_set.tm_mday = (int)p_data[4];
+		time_set.tm_mon = (int)p_data[3];
+		//年小端
+		time_set.tm_year = (int)((((int)p_data[2])<<8 | (int)p_data[1]) - 1990);
+		
+		//将时间写入RTC
+		err_code =  rtc_time_write(&time_set);
+		if(err_code ==NRF_SUCCESS)
+		{
+			//将命令加上0x40,返回给app
+			nus_data_send[0] = p_data[0] + 0x40;
+			memcpy(&nus_data_send[1], &p_data[1], (length -1));
+			nus_data_send_length = length;
+			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+		}
 	}
 	
 }
@@ -334,17 +339,110 @@ static void set_mac(uint8_t *p_data, uint16_t length)
 	
 }
 
+/*******************************************************
+*获取mac地址
+*******************************************************/
+static void get_mac(uint8_t *p_data, uint16_t length)
+{
+	uint32_t err_code;
+	char set_fail[13] = "get mac fail";
+	
+	memset(addr.addr, 0, 6);
+	err_code = sd_ble_gap_address_get(&addr);
+	if(err_code == NRF_SUCCESS)
+	{
+			//将命令加上0x40,返回给app
+			nus_data_send[0] = p_data[0] + 0x40;
+			memcpy(&nus_data_send[1], &addr.addr[0], 6);
+			nus_data_send_length = 6;
+			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+	}
+	else
+	{
+		//向手机发送失败信息"set mac fail"
+		ble_nus_string_send(&m_nus, (uint8_t *)set_fail, strlen(set_fail) );
+	}
+	
+}
+
 /*************************************************
 *设置管理员密码
 **************************************************/
 static void set_super_key(uint8_t *p_data, uint16_t length)
 {
-	memset(flash_write_data, 0, BLOCK_STORE_SIZE);
-	memcpy(&flash_write_data[1],&p_data[1], SUPER_KEY_LENGTH);
-	flash_write_data[0] = 0x77;//'w'
-	//超级密码就12位，取写入数据前面16位(16>(1+12))
-	write_super_key(flash_write_data,16);
+	static char super_key_exist[] = "skey exist";
+	static char checked_superkey_false[16] = "skey check fail";
+	//1读取超级管理员存储区内容
+	inter_flash_read(flash_read_data, 16, SPUER_KEY_OFFSET, &block_id_flash_store);		
 	
+	if( flash_read_data[0] != 'w' )
+	{//没有有管理员密码
+		memset(flash_write_data, 0, BLOCK_STORE_SIZE);
+		memcpy(&flash_write_data[1],&p_data[1], SUPER_KEY_LENGTH);
+		flash_write_data[0] = 0x77;//'w'
+		//超级密码就12位，取写入数据前面16位(16>(1+12))
+		write_super_key(flash_write_data,16);
+	}
+	else
+	{
+		if(is_superkey_checked == true)
+		{//存在管理员密码，但是验证了管理员密码
+			memset(flash_write_data, 0, BLOCK_STORE_SIZE);
+			memcpy(&flash_write_data[1],&p_data[1], SUPER_KEY_LENGTH);
+			flash_write_data[0] = 0x77;//'w'
+			//超级密码就12位，取写入数据前面16位(16>(1+12))
+			write_super_key(flash_write_data,16);
+		}
+		else
+		{//已经有管理员密码了,且没有验证管理员密码
+			//向手机发送失败信息"skey check fail"
+			ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+									strlen(checked_superkey_false) );
+		}
+	}
+	
+}
+
+/*******************************************
+*验证超级管理员密码
+*******************************************/
+static void check_super_key(uint8_t *p_data, uint16_t length)
+{
+	static char checked_superkey_false[16] = "skey check fail";
+	//1、从flash中读取超级管理员密码
+	inter_flash_read(flash_read_data, 16, SPUER_KEY_OFFSET, &block_id_flash_store);		
+	if(flash_read_data[0] == 0x77)
+	{
+		memset(super_key, 0, 12);
+		memcpy(super_key, &flash_read_data[1],12);
+		//2、对比管理员密码是否相同
+		if(strncasecmp((char *)&p_data[1],super_key, SUPER_KEY_LENGTH) == 0)
+		{
+#if defined(BLE_DOOR_DEBUG)
+			printf("spuer key checked\r\n");
+#endif
+			is_superkey_checked = true;
+			
+			//将命令加上0x40,返回给app
+			nus_data_send[0] = p_data[0] + 0x40;
+			memcpy(&nus_data_send[1], &p_data[1], (length -1));
+			nus_data_send_length = length;
+			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+		}
+		else
+		{
+			//向手机发送失败信息"skey check fail"
+			ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+									strlen(checked_superkey_false) );
+		}
+	}
+	else
+	{
+		//向手机发送失败信息"skey check fail"
+		ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+									strlen(checked_superkey_false) );
+	}
+
 }
 
 /*****************************************
@@ -548,6 +646,7 @@ static void send_fig_r301t_cmd(uint8_t *p_data, uint16_t length)
 ***********************************************************/
 void operate_code_check(uint8_t *p_data, uint16_t length)
 {
+	static char checked_superkey_false[16] = "skey check fail";
 	switch(p_data[0])
 	{
 		case '0'://设置开锁秘钥
@@ -562,14 +661,32 @@ void operate_code_check(uint8_t *p_data, uint16_t length)
 		case '9':
 		if(length ==0x0a)//10字节
 		{
-			cmd_set_key(p_data, length);
+			if(is_superkey_checked == true)//如果验证了超级密码
+			{
+				cmd_set_key(p_data, length);
+			}
+			else
+			{
+				//向手机发送失败信息"skey check fail"
+				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+									strlen(checked_superkey_false) );
+			}
 		}
 		break;
 		
 		case SYNC_TIME://同步时间
 		if(length ==0x08)//8字节
 		{
+			if(is_superkey_checked == true)//如果验证了超级密码
+			{
 			sync_rtc_time(p_data, length);
+			}
+			else
+			{
+				//向手机发送失败信息"skey check fail"
+				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+									strlen(checked_superkey_false) );
+			}
 		}
 		break;
 		
@@ -577,21 +694,39 @@ void operate_code_check(uint8_t *p_data, uint16_t length)
 			get_rtc_time(p_data, length);
 		break;
 		
-		case GET_KEY_NOW://获取现在的动态密码
+		case GET_KEY_NOW://获取现在的动态密码，后期要注释掉
 			get_key_now(p_data, length);
 		break;
 		
 		case SET_PARAMS://设置参量
 		if(length == 0x7)//6字节
 		{
-			set_param(p_data, length);
+			if(is_superkey_checked == true)//如果验证了超级密码
+			{
+				set_param(p_data, length);
+			}
+			else
+			{
+				//向手机发送失败信息"skey check fail"
+				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+									strlen(checked_superkey_false) );
+			}
 		}
 		break;
 		
 		case SET_KEY_SEED://写入种子
 		if(length == 0x11)//17字节
 		{
-			set_key_seed(p_data, length);
+			if(is_superkey_checked == true)//如果验证了超级密码
+			{
+				set_key_seed(p_data, length);
+			}
+			else
+			{
+				//向手机发送失败信息"skey check fail"
+				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+									strlen(checked_superkey_false) );
+			}
 		}
 		break;
 		
@@ -602,15 +737,44 @@ void operate_code_check(uint8_t *p_data, uint16_t length)
 		}
 		break;
 		
+		case GET_MAC://获取mac地址，
+			get_mac(p_data, length);
+		break;
+				
 		case SET_SUPER_KEY://设置管理员密码
 		if(length == 0x0d)//13字节
 		{
-			set_super_key(p_data, length);
+			if(is_superkey_checked == true)//如果验证了超级密码
+			{
+				set_super_key(p_data, length);
+			}
+			else
+			{
+				//向手机发送失败信息"skey check fail"
+				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+									strlen(checked_superkey_false) );
+			}
+		}
+		break;
+		
+		case CHECK_SUPER_KEY://验证超级管理员密码
+		if(length == 0x0d)
+		{
+			check_super_key(p_data,length);
 		}
 		break;
 		
 		case GET_USED_KEY://查询有效密码
-			get_used_key(p_data, length);
+			if(is_superkey_checked == true)//如果验证了超级密码
+			{
+				get_used_key(p_data, length);
+			}
+			else
+			{
+				//向手机发送失败信息"skey check fail"
+				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+									strlen(checked_superkey_false) );
+			}
 		break;
 		
 		case GET_RECORD_NUMBER://查询开门记录数量
@@ -620,21 +784,48 @@ void operate_code_check(uint8_t *p_data, uint16_t length)
 		case GET_RECENT_RECORD://查询指定日期后的记录
 		if(length == 0x08)//8字节
 		{
-			get_recent_record(p_data, length);
+			if(is_superkey_checked == true)//如果验证了超级密码
+			{
+				get_recent_record(p_data, length);
+			}
+			else
+			{
+				//向手机发送失败信息"skey check fail"
+				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+									strlen(checked_superkey_false) );
+			}
 		}
 		break;
 		
 		case 0x1B://指纹模块fm260b指令，长度为8，直接通过串口发送给模块
 			if(length == 8)//长度为8
 			{
-				send_fig_fm260b_cmd(p_data, length);
+				if(is_superkey_checked == true)//如果验证了超级密码
+				{
+					send_fig_fm260b_cmd(p_data, length);
+				}
+				else
+				{
+					//向手机发送失败信息"skey check fail"
+					ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+									strlen(checked_superkey_false) );
+				}
 			}
 		break;
 		
 		case 0xEF:
 			if(length >11) //传送命令包最少12位
 			{
-			send_fig_r301t_cmd(p_data, length);
+				if(is_superkey_checked == true)//如果验证了超级密码
+				{
+					send_fig_r301t_cmd(p_data, length);
+				}
+				else
+				{
+					//向手机发送失败信息"skey check fail"
+					ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+									strlen(checked_superkey_false) );
+				}
 			}
 		break;
 		

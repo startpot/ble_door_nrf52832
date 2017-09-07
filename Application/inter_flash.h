@@ -10,7 +10,7 @@
 struct key_store_struct
 {
 	uint8_t 	key_store[6];
-	uint16_t 	key_use_time;//有效时间，以10分钟为单位
+	uint16_t 	key_use_time;//有效时间，以1分钟为单位
 	uint8_t		control_bits;
 	uint8_t		key_vesion;
 	time_t		key_store_time;

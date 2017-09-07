@@ -31,6 +31,7 @@
 #include  "r301t.h"
 #include "beep.h"
 #include "led_button.h"
+#include "operate_code.h"
 
 dm_application_instance_t		m_app_handle;
 dm_handle_t                    	m_dm_handle;
@@ -309,6 +310,8 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
 			//增加处理
 			dm_device_delete_all(&m_app_handle);
+			//断开时，设置超级密码验证状态为失败
+			is_superkey_checked = false;
 		break;
 
 		case BLE_GAP_EVT_AUTH_STATUS:

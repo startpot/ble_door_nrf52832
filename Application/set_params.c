@@ -63,7 +63,7 @@ void set_default_params(void)
 		DOOR_OPEN_HOLD_TIME = flash_store_params[2];//开门保持时间
 		BEEP_DIDI_NUMBER = flash_store_params[3];//蜂鸣器响次数
 		VOL_VALUE = flash_store_params[4];//电池电压报警
-		KEY_INPUT_USE_TIME = flash_store_params[5];//键盘密码输入密码有效时间
+		KEY_INPUT_USE_TIME = flash_store_params[5];//键盘密码输入密码有效时间，以10min为单位
 		MOTO_DIR = flash_store_params[6];//电机的方向
 	}
 	else
@@ -72,7 +72,7 @@ void set_default_params(void)
 		DOOR_OPEN_HOLD_TIME = 0x0a;//开门保持时间
 		BEEP_DIDI_NUMBER = 0x05;//蜂鸣器响次数
 		VOL_VALUE = 0x05;//电池电压报警
-		KEY_INPUT_USE_TIME = 0x05;//键盘密码输入密码有效时间
+		KEY_INPUT_USE_TIME = 0x05;//键盘密码输入密码有效时间，以10min为单位
 		MOTO_DIR = 0;
 	}
 #if defined(BLE_DOOR_DEBUG)
