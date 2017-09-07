@@ -105,7 +105,7 @@ void flash_init(void)
 	err_code = pstorage_register(&module_param_key_store, &block_id_flash_store);
 	APP_ERROR_CHECK(err_code);
 #if defined(BLE_DOOR_DEBUG)
-	printf("flash name:block_id_flash_store.\r\n" );
+	printf("flash name:block_id_flash_store.\r\n");
 	printf("it has %i blocks and block size is %i \r\n",\
 			module_param_key_store.block_count, module_param_key_store.block_size);
 #endif
@@ -134,13 +134,13 @@ void flash_init(void)
 		if(key_store_length.key_store_length == 0xffffffff)
 		{
 			key_store_length.key_store_length = 0x0;
-			key_store_length.key_store_full =0x0;
+			key_store_length.key_store_full = 0x0;
 			err_code = pstorage_clear(&block_id_key_store,BLOCK_STORE_SIZE);
 			APP_ERROR_CHECK(err_code);
 			err_code = pstorage_store(&block_id_key_store, (uint8_t *)&key_store_length, sizeof(struct key_store_length_struct), 0);
 			APP_ERROR_CHECK(err_code);
 		}
-		key_store_length_setted =true;
+		key_store_length_setted = true;
 #if defined(BLE_DOOR_DEBUG)
 		printf("key_store length set %d\r\n", key_store_length.key_store_length);
 #endif
@@ -155,7 +155,7 @@ void flash_init(void)
 		if(record_length.record_length == 0xffffffff)
 		{
 			record_length.record_length = 0x0;
-			record_length.record_full =0x0;
+			record_length.record_full = 0x0;
 			err_code = pstorage_clear(&block_id_record,BLOCK_STORE_SIZE);
 			APP_ERROR_CHECK(err_code);
 			err_code = pstorage_store(&block_id_record, (uint8_t *)&record_length, sizeof(struct record_length_struct), 0);

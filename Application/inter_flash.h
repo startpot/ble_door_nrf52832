@@ -10,7 +10,7 @@
 struct key_store_struct
 {
 	uint8_t 	key_store[6];
-	uint16_t 	key_use_time;//有效时间，以1分钟为单位
+	uint16_t 	key_use_time;//有效时间，以10分钟为单位
 	uint8_t		control_bits;
 	uint8_t		key_vesion;
 	time_t		key_store_time;
@@ -25,13 +25,13 @@ struct key_store_length_struct
 
 #define SUPER_KEY_LENGTH		12
 //超级管理员秘钥
-extern char							super_key[SUPER_KEY_LENGTH];
+extern char						super_key[SUPER_KEY_LENGTH];
 
 //开门记录
 struct door_open_record
 {
 	uint8_t		key_store[6];
-	time_t		door_open_time;//门打开的时间s
+	time_t		door_open_time;//门打开的时间s,(从1970.1.1到现在的时间的s)
 };
 
 //开门记录的长度
@@ -59,45 +59,44 @@ struct record_length_struct
 #define DEFAULT_PARAMS_OFFSET		0
 #define DEFAULT_PARAMS_NUMBER		1
 
-#define MAC_OFFSET							DEFAULT_PARAMS_OFFSET + DEFAULT_PARAMS_NUMBER
-#define MAC_NUMBER							1
+#define MAC_OFFSET					DEFAULT_PARAMS_OFFSET + DEFAULT_PARAMS_NUMBER
+#define MAC_NUMBER					1
 
 #define SPUER_KEY_OFFSET			MAC_OFFSET + MAC_NUMBER
 #define SUPER_KEY_NUMBER			1
 
-#define SEED_OFFSET							SPUER_KEY_OFFSET + SUPER_KEY_NUMBER
-#define SEED_NUMBER						1
+#define SEED_OFFSET					SPUER_KEY_OFFSET + SUPER_KEY_NUMBER
+#define SEED_NUMBER					1
 
-#define DEVICE_NAME_OFFSET		SEED_OFFSET + SEED_NUMBER
-#define DEVICE_NAME_NUMBER		1
+#define DEVICE_NAME_OFFSET			SEED_OFFSET + SEED_NUMBER
+#define DEVICE_NAME_NUMBER			1
 
 #define	KEY_STORE_OFFSET			DEVICE_NAME_OFFSET + DEVICE_NAME_NUMBER
-#define 	KEY_STORE_LENGTH			1	//第一个4字节表示条数，第二个字节表示是否满
+#define KEY_STORE_LENGTH			1	//第一个4字节表示条数，第二个字节表示是否满
 #define	KEY_STORE_NUMBER			10
 
-#define	RECORD_OFFSET					KEY_STORE_OFFSET + KEY_STORE_LENGTH + KEY_STORE_NUMBER
-#define 	RECORD_LENGTH					1	//第一个4字节表示条数，第二个字节表示是否满
+#define	RECORD_OFFSET				KEY_STORE_OFFSET + KEY_STORE_LENGTH + KEY_STORE_NUMBER
+#define RECORD_LENGTH				1	//第一个4字节表示条数，第二个字节表示是否满
 #define	RECORD_NUMBER				30
 
 
-#define BLOCK_STORE_COUNT			DEFAULT_PARAMS_NUMBER +MAC_NUMBER + \
-																		SUPER_KEY_NUMBER + SEED_NUMBER +\
-																		DEVICE_NAME_NUMBER + KEY_STORE_LENGTH + \
-																		KEY_STORE_NUMBER + RECORD_LENGTH + \
-																		RECORD_NUMBER
+#define BLOCK_STORE_COUNT			DEFAULT_PARAMS_NUMBER +MAC_NUMBER + SUPER_KEY_NUMBER + \
+									SEED_NUMBER + DEVICE_NAME_NUMBER + \
+									KEY_STORE_LENGTH + KEY_STORE_NUMBER + \
+									RECORD_LENGTH + RECORD_NUMBER
 
 #define SEED_LENGTH					16
 
 
-extern pstorage_handle_t				block_id_flash_store;
+extern pstorage_handle_t			block_id_flash_store;
 
-extern pstorage_handle_t				block_id_default_params;
-extern pstorage_handle_t				block_id_mac;
-extern pstorage_handle_t				block_id_super_key;
-extern pstorage_handle_t				block_id_seed;
-extern pstorage_handle_t				block_id_device_name;
-extern pstorage_handle_t				block_id_key_store;
-extern pstorage_handle_t				block_id_record;
+extern pstorage_handle_t			block_id_default_params;
+extern pstorage_handle_t			block_id_mac;
+extern pstorage_handle_t			block_id_super_key;
+extern pstorage_handle_t			block_id_seed;
+extern pstorage_handle_t			block_id_device_name;
+extern pstorage_handle_t			block_id_key_store;
+extern pstorage_handle_t			block_id_record;
 
 extern struct key_store_length_struct		key_store_length;
 extern struct record_length_struct			record_length;

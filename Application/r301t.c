@@ -143,8 +143,8 @@ void fig_r301t_reply_check(void)
 				//应答包失败
 				if(fig_recieve_data[9] !=0x00)
 				{
-					//应答失败，鸣笛
-					beep_didi(5);
+					//应答失败，鸣笛4次
+					beep_didi(4);
 					//失败情况，如果是第一步则重复发GR_GetImage
 					if(r301t_autosearch_step == 1)
 					{
