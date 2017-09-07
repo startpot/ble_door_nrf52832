@@ -145,11 +145,15 @@ void fig_r301t_reply_check(void)
 				{
 					//应答失败，鸣笛
 					beep_didi(5);
-					fig_recieve_data_length = 0;
+					//失败情况，如果是第一步则重复发GR_GetImage
 					if(r301t_autosearch_step == 1)
 					{
 						//第一步执行失败，继续发送getimage命令
 						fig_r301t_send_getimage();
+					}
+					else
+					{//如果不是第一步，则直接退出
+						r301t_autosearch_step = 0;
 					}
 					fig_recieve_data_length =0;
 				}
