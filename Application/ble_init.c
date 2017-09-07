@@ -174,12 +174,15 @@ static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data, uint16_t lengt
     while(app_uart_put('\n') != NRF_SUCCESS);
 */
 	//将获取的数据存到全局变量，供operate_code_check函数用
-	for(int i = 0; i <length; i++)
-	{
-		nus_data_recieve[i] = p_data[i];
+	if(operate_code_setted == false)
+	{//不在执行上位机发送的命令
+		for(int i = 0; i <length; i++)
+		{
+			nus_data_recieve[i] = p_data[i];
+		}
+		nus_data_recieve_length = length;
+		operate_code_setted = true;
 	}
-	nus_data_recieve_length = length;
-	operate_code_setted = true;
 	//测试程序，将蓝牙串口的数据再返回给蓝牙串口
 //	ble_nus_string_send(&m_nus, nus_data_array, nus_data_array_length);
 
