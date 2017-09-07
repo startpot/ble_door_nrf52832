@@ -376,7 +376,7 @@ static void set_super_key(uint8_t *p_data, uint16_t length)
 	inter_flash_read(flash_read_data, 16, SPUER_KEY_OFFSET, &block_id_flash_store);		
 	
 	if( flash_read_data[0] != 'w' )
-	{//没有有管理员密码
+	{//没有有管理员密码，直接存储
 		memset(flash_write_data, 0, BLOCK_STORE_SIZE);
 		memcpy(&flash_write_data[1],&p_data[1], SUPER_KEY_LENGTH);
 		flash_write_data[0] = 0x77;//'w'
@@ -744,16 +744,7 @@ void operate_code_check(uint8_t *p_data, uint16_t length)
 		case SET_SUPER_KEY://设置管理员密码
 		if(length == 0x0d)//13字节
 		{
-			if(is_superkey_checked == true)//如果验证了超级密码
-			{
-				set_super_key(p_data, length);
-			}
-			else
-			{
-				//向手机发送失败信息"skey check fail"
-				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
-									strlen(checked_superkey_false) );
-			}
+			set_super_key(p_data, length);
 		}
 		break;
 		
