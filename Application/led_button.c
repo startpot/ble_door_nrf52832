@@ -168,8 +168,8 @@ static void check_keys(void)
 	if(key_input_site == SUPER_KEY_LENGTH)
 	{	
 		inter_flash_read(flash_read_data, 16, SPUER_KEY_OFFSET, &block_id_flash_store);		
-		if(flash_read_data[0] == 0x77)
-		{
+		if(flash_read_data[0] == 'w')
+		{//超级密码设置了
 			memset(super_key, 0, 12);
 			memcpy(super_key, &flash_read_data[1],12);
 			if(strncasecmp(key_input,super_key, SUPER_KEY_LENGTH) == 0)
@@ -230,7 +230,7 @@ static void check_keys(void)
 		
 		//动态密码，获取种子
 		inter_flash_read(flash_read_data, 32, SEED_OFFSET, &block_id_flash_store);
-		if(flash_read_data[0] == 0x77)
+		if(flash_read_data[0] == 'w')
 		{//设置了种子
 			//获取种子16位，128bit
 			memset(seed, 0, 16);
