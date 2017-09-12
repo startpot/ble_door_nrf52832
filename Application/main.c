@@ -154,7 +154,7 @@ int main(void)
     //Initialize
     timers_init();
 	uart_init();
-    buttons_leds_init(&erase_bonds);
+  //  buttons_leds_init(&erase_bonds);
     ble_stack_init();
 	device_manager_init(erase_bonds);
 	//初始化内部flash，和各个存储变量，紧跟在device_manager_init后面，读取mac和蓝牙名称

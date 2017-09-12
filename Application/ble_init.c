@@ -118,11 +118,11 @@ void timers_init(void)
     APP_ERROR_CHECK(err_code);
 
 	//重复广播的定时器
-	err_code = app_timer_create(&m_ad_repeat_timer_id,
+/*	err_code = app_timer_create(&m_ad_repeat_timer_id,
                                 APP_TIMER_MODE_REPEATED,
                                 ad_repeat_timeout_handler);
     APP_ERROR_CHECK(err_code);
-
+*/
 }
 
 void application_timers_start(void)
@@ -130,10 +130,10 @@ void application_timers_start(void)
     /* YOUR_JOB: Start your timers. below is an example of how to start a timer.
     uint32_t err_code;
     err_code = app_timer_start(m_app_timer_id, TIMER_INTERVAL, NULL);
-    APP_ERROR_CHECK(err_code); */
+    APP_ERROR_CHECK(err_code); 
 	uint32_t err_code;
     err_code = app_timer_start(m_ad_repeat_timer_id, AD_REPEAT_DELAY, NULL);
-    APP_ERROR_CHECK(err_code);
+    APP_ERROR_CHECK(err_code);*/
 
 }
 
@@ -487,8 +487,10 @@ void advertising_init(void)
     memset(&advdata, 0, sizeof(advdata));
     advdata.name_type          = BLE_ADVDATA_FULL_NAME;
     advdata.include_appearance = false;
-    advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE;
-
+  //  advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE;
+	advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
+	
+	
     memset(&scanrsp, 0, sizeof(scanrsp));
     scanrsp.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
     scanrsp.uuids_complete.p_uuids  = m_adv_uuids;
@@ -496,7 +498,8 @@ void advertising_init(void)
     ble_adv_modes_config_t options = {0};
     options.ble_adv_fast_enabled  = BLE_ADV_FAST_ENABLED;
     options.ble_adv_fast_interval = APP_ADV_INTERVAL;
-    options.ble_adv_fast_timeout  = APP_ADV_TIMEOUT_IN_SECONDS;
+   // options.ble_adv_fast_timeout  = APP_ADV_TIMEOUT_IN_SECONDS;
+	options.ble_adv_fast_timeout  = 0;
 
     err_code = ble_advertising_init(&advdata, &scanrsp, &options, on_adv_evt, NULL);
     APP_ERROR_CHECK(err_code);
