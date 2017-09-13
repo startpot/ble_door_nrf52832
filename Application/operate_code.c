@@ -19,6 +19,7 @@
 #include "led_button.h"
 #include "fm260b.h"
 #include "r301t.h"
+#include "battery.h"
 
 struct key_store_struct				key_store_struct_set;
 
@@ -366,6 +367,22 @@ static void get_mac(uint8_t *p_data, uint16_t length)
 	}
 	
 }
+
+/***************************************************
+*获取电池电量 0x2c~~5.0V 0x36~~6.0V ，大致1~~~0.1V
+****************************************************/
+static void get_battery_level(uint8_t *p_data, uint16_t length)
+{
+	uint8_t tmp = (battery_level_value &0x0ff0) >>4;
+	
+	//将命令加上0x40,返回给app
+	nus_data_send[0] = p_data[0] + 0x40;
+	memcpy(&nus_data_send[1], &tmp, 1);
+	nus_data_send_length = 2;
+	ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+	
+}
+
 
 /**********************************************************************
 *设置管理员密码，如果是第一次设置，直接通过，返回设置成功
@@ -754,7 +771,11 @@ void operate_code_check(uint8_t *p_data, uint16_t length)
 		case GET_MAC://获取mac地址，
 			get_mac(p_data, length);
 		break;
-				
+		
+		case GET_BATTERY_LEVEL://获取电池电量
+			get_battery_level(p_data, length);
+		break;
+		
 		case SET_SUPER_KEY://设置管理员密码
 		if(length == 0x0d)//13字节
 		{

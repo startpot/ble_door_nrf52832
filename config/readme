@@ -25,8 +25,18 @@ twi(iic)使能
 #define DEVICE_MANAGER_APP_CONTEXT_SIZE    16
 
 
+4使用saadc功能后，需要修改nrf_drv_config.h中369行
+#define SAADC_ENABLED	1
+同时，由于使用了协议栈，在battery.c中
+static const nrf_drv_timer_t  m_timer = NRF_DRV_TIMER_INSTANCE(1)
+m_timer 不能使用timer0
+
+
+
 -----2017.8.23
 完成增加配对密码，未完成的是uart不能指定相应的pin28 29
 
 ----2017.8.30
 完成蓝牙串口和uart的初始化，同时完成部分指纹模块的调试
+----2017.9.13
+完成电池电量服务的功能

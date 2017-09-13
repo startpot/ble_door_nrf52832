@@ -52,6 +52,7 @@
 #include "sm4_mcu.h"
 #include "sm4_dpwd.h"
 #include "my_time.h"
+#include "battery.h"
 
 /***************************
 * 动态口令算法测试程序
@@ -170,13 +171,16 @@ int main(void)
 	//初始化灯，拉高，灭
 	leds_init();
 //	led test
-//	leds_on(LED_13,5);
+	leds_on(LED_13,5);
+
 
 	
 	//初始化电机
 	moto_init();
 	//初始化蜂鸣器
 	beep_init();
+	//beep test
+//	beep_didi(5);
 	//初始化触摸屏
 	tsm12_init();
 	//初始化RTC
@@ -193,6 +197,9 @@ int main(void)
     err_code = ble_advertising_start(BLE_ADV_MODE_FAST);
     APP_ERROR_CHECK(err_code);
     
+	//使能电池服务
+	battery_level_init();
+	
     //Enter main loop.
     for (;;)
     {

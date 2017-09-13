@@ -86,19 +86,7 @@ static void sec_req_timeout_handler(void * p_context)
 
 }
 
-//因为广播函数是在后面定义的，使用的话，先定义
-void advertising_init(void);
 
-/**************************************
-*重复广播的定时器函数
-**************************************/
-static void ad_repeat_timeout_handler(void *p_context)
-{
-	UNUSED_PARAMETER(p_context);
-	//执行广播
-	advertising_init();
-
-}
 
 /*********************************
 *初始化timers
@@ -117,12 +105,6 @@ void timers_init(void)
                                 sec_req_timeout_handler);
     APP_ERROR_CHECK(err_code);
 
-	//重复广播的定时器
-/*	err_code = app_timer_create(&m_ad_repeat_timer_id,
-                                APP_TIMER_MODE_REPEATED,
-                                ad_repeat_timeout_handler);
-    APP_ERROR_CHECK(err_code);
-*/
 }
 
 void application_timers_start(void)
@@ -351,6 +333,8 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
 /************************
 *BLE事件分发
  ************************/
+//因为广播函数是在后面定义的，使用的话，先定义
+void advertising_init(void);
 
 static void ble_evt_dispatch(ble_evt_t * p_ble_evt)
 {

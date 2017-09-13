@@ -26,7 +26,7 @@ uint8_t LED_LIGHT_TIME;
 uint32_t 	OPEN_TIME;
 uint8_t		DOOR_OPEN_HOLD_TIME;
 uint8_t 	BEEP_DIDI_NUMBER;
-uint8_t		VOL_VALUE;
+uint8_t		VOL_VALUE;	//实际值<<4位
 uint8_t		KEY_INPUT_USE_TIME;
 uint8_t		MOTO_DIR;
 
@@ -71,7 +71,7 @@ void set_default_params(void)
 		OPEN_TIME = 0x03;//电机转动时间
 		DOOR_OPEN_HOLD_TIME = 0x0a;//开门保持时间
 		BEEP_DIDI_NUMBER = 0x05;//蜂鸣器响次数
-		VOL_VALUE = 0x05;//电池电压报警
+		VOL_VALUE = 0x2C;//电池电压报警,左移4位，大致是5.0V(设定的欠压值)
 		KEY_INPUT_USE_TIME = 0x05;//键盘密码输入密码有效时间，以10min为单位
 		MOTO_DIR = 0;
 	}

@@ -39,15 +39,18 @@ extern bool		is_superkey_checked;
 #define	SET_MAC					0x83
 #define	SET_BLE_UUID			0x84
 #define	SET_SUPER_KEY			0x85	//设置管理员密码
+#define GET_TIME				0x86
 #define	GET_USED_KEY			0x88
 #define	GET_RECORD_NUMBER		0x89
 #define	GET_RECENT_RECORD		0x8a
-
-
-#define GET_TIME				0x86
-#define	GET_KEY_NOW				0x87
 #define GET_MAC					0x8b	//返回mac
+#define GET_BATTERY_LEVEL		0x8c	//返回电池电量
+
 #define CHECK_SUPER_KEY			0x8F	//验证超级密码
+
+
+#define	GET_KEY_NOW				0x87	//TODO 后期移除
+
 
 
 void operate_code_check(uint8_t *p_data, uint16_t length);

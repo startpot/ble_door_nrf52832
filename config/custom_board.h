@@ -110,6 +110,9 @@ J4-6(touch_in)	16			5(touch_in)
 //beep
 #define BEEP_IN_PIN		13
 
+//battery level en
+#define BATTERY_LEVEL_EN	5
+
 
 //uart
 #define RX_PIN_NUMBER		18
