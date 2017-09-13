@@ -126,24 +126,9 @@ void gap_params_init(void)
 
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&sec_mode);
 	
-	//设备的广播名由tecsheild_door_mac地址(6位)
-	ble_gap_addr_t device_addr;
-	uint8_t device_name[21];
-	//获取mac
-	err_code = sd_ble_gap_address_get(&device_addr);
-	
-	//合并
-	strcpy((char *)device_name, DEVICE_NAME);
-	memcpy(&device_name[15], device_addr.addr, 6);
-	
-  //  err_code = sd_ble_gap_device_name_set(&sec_mode,
-  //                                        (const uint8_t *) DEVICE_NAME,
-  //                                        strlen(DEVICE_NAME));
-										  
-	 err_code = sd_ble_gap_device_name_set(&sec_mode,
-                                          (const uint8_t *) device_name,
-                                          strlen((char*)device_name));
-										  
+    err_code = sd_ble_gap_device_name_set(&sec_mode,
+                                          (const uint8_t *) DEVICE_NAME,
+                                        strlen(DEVICE_NAME));
 										  
     APP_ERROR_CHECK(err_code);
 
@@ -481,14 +466,24 @@ void advertising_init(void)
     uint32_t      err_code;
     ble_advdata_t advdata;
     ble_advdata_t scanrsp;
-
+	ble_advdata_manuf_data_t manuf_data; //自定义厂商数据，这里为mac
+	
+	memset(&advdata, 0, sizeof(advdata));
+	
+	//广播数据内厂商ID
+	manuf_data.company_identifier = APP_COMPANY_ID;
+	//添加厂商自定义数据(其实就时mac地址)
+	ble_gap_addr_t device_addr;
+	sd_ble_gap_address_get(&device_addr);
+	memcpy(manuf_data.data.p_data, device_addr.addr, 6);
+	manuf_data.data.size = 6;
+	
     // Build advertising data struct to pass into @ref ble_advertising_init.
-    memset(&advdata, 0, sizeof(advdata));
     advdata.name_type          = BLE_ADVDATA_FULL_NAME;
     advdata.include_appearance = false;
   //  advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE;
 	advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
-	
+	advdata.p_manuf_specific_data = &manuf_data;
 	
     memset(&scanrsp, 0, sizeof(scanrsp));
     scanrsp.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);

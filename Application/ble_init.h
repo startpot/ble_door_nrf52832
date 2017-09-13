@@ -17,6 +17,8 @@
 #define CENTRAL_LINK_COUNT					0
 #define PERIPHERAL_LINK_COUNT				1
 
+#define APP_COMPANY_ID						0x5a5a			//自定义厂商ID
+
 #define DEVICE_NAME							"tecsheild_door_"//蓝牙设备名称，蓝牙广播给其他设备的名字
 #define DEVICE_NAME_SIZE					31 //名称最长20 -2字节，设备规定最长31
 //#define MANUFACTURER_NAME					"NordicSemiconductor"   //设备制造商，Will be passed to Device Information Service             
