@@ -118,12 +118,12 @@ void flash_init(void)
 	APP_ERROR_CHECK(err_code);
 
 	//取设置的device_name
-	err_code =pstorage_block_identifier_get(&block_id_flash_store, \
+/*	err_code =pstorage_block_identifier_get(&block_id_flash_store, \
 						(pstorage_size_t)DEVICE_NAME_OFFSET, &block_id_device_name);
 	APP_ERROR_CHECK(err_code);
 	err_code = pstorage_load(device_name,&block_id_device_name,DEVICE_NAME_SIZE,0);
 	APP_ERROR_CHECK(err_code);
-	
+*/	
 	//如果钥匙记录为全f，则写钥匙记录条数为0
 	err_code = pstorage_block_identifier_get(&block_id_flash_store, \
 						(pstorage_size_t)KEY_STORE_OFFSET, &block_id_key_store);

@@ -42,7 +42,6 @@ ble_nus_t	m_nus;//ble 服务注册的nus服务
 uint16_t	m_conn_handle = BLE_CONN_HANDLE_INVALID;
 
 uint8_t		mac[8];//第一位：标志位，第二位：长度
-uint8_t		device_name[20];//[0]标记位0x77，[1]长度[2...]名字
 
 //自定义的nus服务中data_handle函数中暂存的数据，需要交给check命令
 bool		operate_code_setted = false;
@@ -126,10 +125,26 @@ void gap_params_init(void)
     ble_gap_conn_sec_mode_t sec_mode;
 
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&sec_mode);
-
-    err_code = sd_ble_gap_device_name_set(&sec_mode,
-                                          (const uint8_t *) DEVICE_NAME,
-                                          strlen(DEVICE_NAME));
+	
+	//设备的广播名由tecsheild_door_mac地址(6位)
+	ble_gap_addr_t device_addr;
+	uint8_t device_name[21];
+	//获取mac
+	err_code = sd_ble_gap_address_get(&device_addr);
+	
+	//合并
+	strcpy((char *)device_name, DEVICE_NAME);
+	memcpy(&device_name[15], device_addr.addr, 6);
+	
+  //  err_code = sd_ble_gap_device_name_set(&sec_mode,
+  //                                        (const uint8_t *) DEVICE_NAME,
+  //                                        strlen(DEVICE_NAME));
+										  
+	 err_code = sd_ble_gap_device_name_set(&sec_mode,
+                                          (const uint8_t *) device_name,
+                                          strlen((char*)device_name));
+										  
+										  
     APP_ERROR_CHECK(err_code);
 
     memset(&gap_conn_params, 0, sizeof(gap_conn_params));

@@ -17,8 +17,8 @@
 #define CENTRAL_LINK_COUNT					0
 #define PERIPHERAL_LINK_COUNT				1
 
-#define DEVICE_NAME							"tecsheild_door"//蓝牙设备名称，蓝牙广播给其他设备的名字
-#define DEVICE_NAME_SIZE					20 //名称最长20 -2字节
+#define DEVICE_NAME							"tecsheild_door_"//蓝牙设备名称，蓝牙广播给其他设备的名字
+#define DEVICE_NAME_SIZE					31 //名称最长20 -2字节，设备规定最长31
 //#define MANUFACTURER_NAME					"NordicSemiconductor"   //设备制造商，Will be passed to Device Information Service             
 //#define MODEL_NUMBER						"nRF52"// 型号字符串. Will be passed to Device Information Service.
 //#define MANUFACTURER_ID					0x55AA55AA55 //设备制造商ID(可修改为自己的). Will be passed to Device Information Service.
@@ -71,7 +71,6 @@ extern ble_nus_t				m_nus; /*Nordic UART Service*/
 extern uint16_t					m_conn_handle;
 
 extern uint8_t					mac[8];//第一位：标志位，第二位：长度
-extern uint8_t					device_name[DEVICE_NAME_SIZE];
 
 //以下3个变量是在uart service中保存的全局变量，交给operate_code_check函数去处理,蓝牙串口接收的数据
 extern bool							operate_code_setted;
