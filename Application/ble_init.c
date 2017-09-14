@@ -468,6 +468,8 @@ void advertising_init(void)
     ble_advdata_t scanrsp;
 	ble_advdata_manuf_data_t manuf_data; //自定义厂商数据，这里为mac
 	
+	uint8_t device_mac[6];
+	
 	memset(&advdata, 0, sizeof(advdata));
 	
 	//广播数据内厂商ID
@@ -475,7 +477,8 @@ void advertising_init(void)
 	//添加厂商自定义数据(其实就时mac地址)
 	ble_gap_addr_t device_addr;
 	sd_ble_gap_address_get(&device_addr);
-	memcpy(manuf_data.data.p_data, device_addr.addr, 6);
+	memcpy(device_mac, device_addr.addr, 6);
+	manuf_data.data.p_data = device_mac;
 	manuf_data.data.size = 6;
 	
     // Build advertising data struct to pass into @ref ble_advertising_init.
@@ -485,20 +488,54 @@ void advertising_init(void)
 	advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
 	advdata.p_manuf_specific_data = &manuf_data;
 	
+//	advdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
+//    advdata.uuids_complete.p_uuids  = m_adv_uuids;
+	
+	
+	
+	
     memset(&scanrsp, 0, sizeof(scanrsp));
     scanrsp.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
     scanrsp.uuids_complete.p_uuids  = m_adv_uuids;
+	scanrsp.p_manuf_specific_data = &manuf_data;
 
     ble_adv_modes_config_t options = {0};
     options.ble_adv_fast_enabled  = BLE_ADV_FAST_ENABLED;
     options.ble_adv_fast_interval = APP_ADV_INTERVAL;
-   // options.ble_adv_fast_timeout  = APP_ADV_TIMEOUT_IN_SECONDS;
-	options.ble_adv_fast_timeout  = 0;
+    options.ble_adv_fast_timeout  = APP_ADV_TIMEOUT_IN_SECONDS;
+//	options.ble_adv_fast_timeout  = 0;
 
     err_code = ble_advertising_init(&advdata, &scanrsp, &options, on_adv_evt, NULL);
     APP_ERROR_CHECK(err_code);
+//	err_code = ble_advdata_set(&advdata,NULL);
+//    APP_ERROR_CHECK(err_code);
+	
 
 }
+
+// start advertising
+void adverts_start(void)
+{
+    uint32_t             err_code;
+    ble_gap_adv_params_t adv_params;
+    memset(&adv_params, 0, sizeof(adv_params));    
+    
+	//设置广播信道是否开启
+    adv_params.channel_mask.ch_37_off = 0;
+    adv_params.channel_mask.ch_38_off = 0;
+    adv_params.channel_mask.ch_39_off = 0;
+
+    adv_params.type        = BLE_GAP_ADV_TYPE_ADV_IND;
+    adv_params.p_peer_addr = NULL;
+    adv_params.fp          = BLE_GAP_ADV_FP_ANY;
+    adv_params.interval    = APP_ADV_INTERVAL;
+    adv_params.timeout     = APP_ADV_TIMEOUT_IN_SECONDS;
+    adv_params.p_whitelist = NULL;
+
+    err_code = sd_ble_gap_adv_start(&adv_params);
+    APP_ERROR_CHECK(err_code);
+}
+
 
 
 static void bsp_event_handler(bsp_event_t event)

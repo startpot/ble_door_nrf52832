@@ -126,6 +126,9 @@ static void battery_level_en(void)
 	nrf_gpio_cfg_output( BATTERY_LEVEL_EN );
 	nrf_gpio_pin_set( BATTERY_LEVEL_EN );
 	
+	//设置电压测量引脚为输入
+	nrf_gpio_cfg_input(BATTERY_LEVEL_IN, NRF_GPIO_PIN_NOPULL);
+	
 }
 
 

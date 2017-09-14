@@ -611,6 +611,45 @@ static void get_recent_record(uint8_t *p_data, uint16_t length)
 	
 }
 
+/*************************************
+*用户解除绑定命令
+**************************************/
+static void user_unbind_cmd(uint8_t *p_data, uint16_t length)
+{
+	
+	static uint8_t fig_r301t_empty_cmd[12]= {0xEF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF,\
+													0x01, 0x00, 0x03, 0x0d, \
+													0x00, 0x11};
+	//用户解除绑定
+	//1、清除内部flash所有数据
+						
+	for(int j=0;j < BLOCK_STORE_COUNT; j++)
+	{
+	pstorage_block_identifier_get(&block_id_flash_store, \
+						(pstorage_size_t)j, &block_id_write);
+
+	pstorage_clear(&block_id_write, BLOCK_STORE_SIZE);
+
+	}
+	
+	//2、清除指纹内所有存储指纹
+	for (uint32_t i = 0; i < 12; i++)
+	{
+		while(app_uart_put(fig_r301t_empty_cmd[i]) != NRF_SUCCESS);
+	}
+	//3、向上位机发送结果
+	//将命令加上0x40,返回给app
+	nus_data_send[0] = p_data[0] + 0x40;
+	nus_data_send[1] = 0;
+	nus_data_send_length = 2;
+	ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+	
+}
+
+
+
+
+
 /*******************************************************
 *指纹模块fm260b命令处理,主要调用uart端口
 *******************************************************/
@@ -823,6 +862,19 @@ void operate_code_check(uint8_t *p_data, uint16_t length)
 		}
 		break;
 		
+		case USER_UNBIND_CMD: //用户解除绑定
+		if(is_superkey_checked == true)//如果验证了超级密码
+			{
+				user_unbind_cmd(p_data, length);
+			}
+			else
+			{
+				//向手机发送失败信息"skey check fail"
+				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+									strlen(checked_superkey_false) );
+			}
+			break;
+		
 		case 0x1B://指纹模块fm260b指令，长度为8，直接通过串口发送给模块
 			if(length == 8)//长度为8
 			{
@@ -854,7 +906,7 @@ void operate_code_check(uint8_t *p_data, uint16_t length)
 				}
 			}
 		break;
-		
+			 
 		default:
 		
 		break;

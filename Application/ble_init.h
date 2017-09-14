@@ -19,7 +19,7 @@
 
 #define APP_COMPANY_ID						0x5a5a			//自定义厂商ID
 
-#define DEVICE_NAME							"tecsheild_door_"//蓝牙设备名称，蓝牙广播给其他设备的名字
+#define DEVICE_NAME							"tecsheild_door"//蓝牙设备名称，蓝牙广播给其他设备的名字
 #define DEVICE_NAME_SIZE					31 //名称最长20 -2字节，设备规定最长31
 //#define MANUFACTURER_NAME					"NordicSemiconductor"   //设备制造商，Will be passed to Device Information Service             
 //#define MODEL_NUMBER						"nRF52"// 型号字符串. Will be passed to Device Information Service.
@@ -97,6 +97,7 @@ void services_init(void);
 void conn_params_init(void);
 void ble_stack_init(void);
 void advertising_init(void);
+void adverts_start(void);
 void power_manage(void);
 void device_manager_init(bool erase_bonds);
 void buttons_leds_init(bool * p_erase_bonds);

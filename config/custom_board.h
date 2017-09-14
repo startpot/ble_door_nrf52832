@@ -112,6 +112,7 @@ J4-6(touch_in)	16			5(touch_in)
 
 //battery level en
 #define BATTERY_LEVEL_EN	5
+#define BATTERY_LEVEL_IN	4
 
 
 //uart

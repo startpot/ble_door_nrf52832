@@ -16,7 +16,7 @@
 #include "app_error.h"
 #include "app_util_platform.h"
 
-#define SAMPLES_IN_BUFFER 1
+#define SAMPLES_IN_BUFFER 5
 
 extern nrf_saadc_value_t	battery_level_buffer[2][SAMPLES_IN_BUFFER];
 extern uint16_t battery_level_value;

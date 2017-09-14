@@ -42,15 +42,16 @@ extern bool		is_superkey_checked;
 #define GET_TIME				0x86
 #define	GET_USED_KEY			0x88
 #define	GET_RECORD_NUMBER		0x89
-#define	GET_RECENT_RECORD		0x8a
-#define GET_MAC					0x8b	//返回mac
-#define GET_BATTERY_LEVEL		0x8c	//返回电池电量
+#define	GET_RECENT_RECORD		0x8A
+#define GET_MAC					0x8B	//返回mac
+#define GET_BATTERY_LEVEL		0x8C	//返回电池电量
+
+#define USER_UNBIND_CMD			0x8E	//用户解除绑定
 
 #define CHECK_SUPER_KEY			0x8F	//验证超级密码
 
 
 #define	GET_KEY_NOW				0x87	//TODO 后期移除
-
 
 
 void operate_code_check(uint8_t *p_data, uint16_t length);

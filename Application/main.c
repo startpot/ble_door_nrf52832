@@ -161,6 +161,10 @@ int main(void)
 	//初始化内部flash，和各个存储变量，紧跟在device_manager_init后面，读取mac和蓝牙名称
 	flash_init();
 	
+	//从内部flash中读取mac，设置
+	set_mac_from_interflash();
+	
+	
     gap_params_init();
     services_init();
     advertising_init();
@@ -188,15 +192,14 @@ int main(void)
 	//初始化触摸屏和指纹的中断函数
 	touch_finger_int_init();
 	
-	//从内部flash中读取mac，设置
-	set_mac_from_interflash();
 	//设置配对密码
 	set_peer_password();
 
 	application_timers_start();
     err_code = ble_advertising_start(BLE_ADV_MODE_FAST);
     APP_ERROR_CHECK(err_code);
-    
+//	adverts_start();
+	
 	//使能电池服务
 	battery_level_init();
 	

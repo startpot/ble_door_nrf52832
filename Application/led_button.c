@@ -378,8 +378,9 @@ void touch_finger_int_init(void)
 	uint32_t   low_to_high_bitmask = 0x00000000;
 	uint32_t   high_to_low_bitmask = (1 << TOUCH_IIC_INT_PIN) | (1 << FIG_WAKE_N_PIN);
     
-	// Configure IIC_INT_PIN with SENSE enabled
+	// Configure IIC_INT_PIN、FIG_WAKE_N_PIN   with SENSE enabled
 	nrf_gpio_cfg_sense_input(TOUCH_IIC_INT_PIN, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
+	nrf_gpio_cfg_sense_input(FIG_WAKE_N_PIN, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
     
 	APP_GPIOTE_INIT(APP_GPIOTE_MAX_USERS);
   
