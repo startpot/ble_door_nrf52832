@@ -404,8 +404,14 @@ static void set_super_key(uint8_t *p_data, uint16_t length)
 		//超级密码就12位，取写入数据前面16位(16>(1+12))
 		write_super_key(flash_write_data,16);
 		//返回设置管理员密码设置成功"skey set success"
-		ble_nus_string_send(&m_nus, (uint8_t *)superkey_set_success, \
+	//	ble_nus_string_send(&m_nus, (uint8_t *)superkey_set_success, \
 									strlen(superkey_set_success) );
+		//将命令加上0x40,返回给app
+		nus_data_send[0] = p_data[0] + 0x40;
+		nus_data_send[1] = 0x00;
+		nus_data_send_length = 2;
+		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+		
 	}
 	else
 	{
@@ -417,14 +423,25 @@ static void set_super_key(uint8_t *p_data, uint16_t length)
 			//超级密码就12位，取写入数据前面16位(16>(1+12))
 			write_super_key(flash_write_data,16);
 			//返回设置管理员密码设置成功"skey set success"
-			ble_nus_string_send(&m_nus, (uint8_t *)superkey_set_success, \
+		//	ble_nus_string_send(&m_nus, (uint8_t *)superkey_set_success, \
 									strlen(superkey_set_success) );
+			
+			//将命令加上0x40,返回给app
+			nus_data_send[0] = p_data[0] + 0x40;
+			nus_data_send[1] = 0x00;
+			nus_data_send_length = 2;
+			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 		}
 		else
 		{//已经有管理员密码了,且没有验证管理员密码
 			//向手机发送失败信息"skey set fail"
-			ble_nus_string_send(&m_nus, (uint8_t *)superkey_set_false, \
+		//	ble_nus_string_send(&m_nus, (uint8_t *)superkey_set_false, \
 									strlen(superkey_set_false) );
+			//将命令加上0x40,返回给app
+			nus_data_send[0] = p_data[0] + 0x40;
+			nus_data_send[1] = 0x01;
+			nus_data_send_length = 2;
+			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 		}
 	}
 	
@@ -731,16 +748,16 @@ void operate_code_check(uint8_t *p_data, uint16_t length)
 		case '9':
 		if(length ==0x0a)//10字节
 		{
-			if(is_superkey_checked == true)//如果验证了超级密码
-			{
+		//	if(is_superkey_checked == true)//如果验证了超级密码
+		//	{
 				cmd_set_key(p_data, length);
-			}
-			else
-			{
+		//	}
+		//	else
+		//	{
 				//向手机发送失败信息"skey check fail"
-				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
-									strlen(checked_superkey_false) );
-			}
+		//		ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+		//							strlen(checked_superkey_false) );
+		//	}
 		}
 		break;
 		

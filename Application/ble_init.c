@@ -468,7 +468,9 @@ void advertising_init(void)
     ble_advdata_t scanrsp;
 	ble_advdata_manuf_data_t manuf_data; //自定义厂商数据，这里为mac
 	
-	uint8_t device_mac[6];
+	uint8_t device_hard_info = 0x03;
+//	uint8_t device_mac[6];
+	uint8_t device_info[7];//设备信息6位mac地址+硬件版本号
 	
 	memset(&advdata, 0, sizeof(advdata));
 	
@@ -477,9 +479,12 @@ void advertising_init(void)
 	//添加厂商自定义数据(其实就时mac地址)
 	ble_gap_addr_t device_addr;
 	sd_ble_gap_address_get(&device_addr);
-	memcpy(device_mac, device_addr.addr, 6);
-	manuf_data.data.p_data = device_mac;
-	manuf_data.data.size = 6;
+	//添加mac
+	memcpy(device_info, device_addr.addr, 6);
+	//添加硬件版本号
+	memcpy(&device_info[6], &device_hard_info, 1);
+	manuf_data.data.p_data = device_info;
+	manuf_data.data.size = 7;
 	
     // Build advertising data struct to pass into @ref ble_advertising_init.
     advdata.name_type          = BLE_ADVDATA_FULL_NAME;
@@ -488,16 +493,11 @@ void advertising_init(void)
 	advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
 	advdata.p_manuf_specific_data = &manuf_data;
 	
-//	advdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
-//    advdata.uuids_complete.p_uuids  = m_adv_uuids;
-	
-	
-	
 	
     memset(&scanrsp, 0, sizeof(scanrsp));
     scanrsp.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
     scanrsp.uuids_complete.p_uuids  = m_adv_uuids;
-	scanrsp.p_manuf_specific_data = &manuf_data;
+//	scanrsp.p_manuf_specific_data = &manuf_data;
 
     ble_adv_modes_config_t options = {0};
     options.ble_adv_fast_enabled  = BLE_ADV_FAST_ENABLED;
