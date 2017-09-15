@@ -89,6 +89,13 @@ static int cmd_set_key(uint8_t *p_data, uint16_t length)
 					memcpy(&open_record_now.key_store, p_data, 6);
 					memcpy(&open_record_now.door_open_time, &time_get_t, 4);
 					record_write(&open_record_now);
+					
+					//返回ff00
+					nus_data_send[0] = 0xff;
+					nus_data_send[1] = 0x00;
+					nus_data_send_length = 2;
+					ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+					
 					goto key_set_exit;
 				}
 			}					
@@ -136,6 +143,12 @@ static int cmd_set_key(uint8_t *p_data, uint16_t length)
 				memcpy(&open_record_now.key_store, p_data, 6);
 				memcpy(&open_record_now.door_open_time, &time_get_t, sizeof(time_t));
 				record_write(&open_record_now);
+				
+				//返回ff00
+				nus_data_send[0] = 0xff;
+				nus_data_send[1] = 0x00;
+				nus_data_send_length = 2;
+				ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 					
 				goto key_set_exit;
 			}
@@ -145,6 +158,12 @@ static int cmd_set_key(uint8_t *p_data, uint16_t length)
 			}
 		}
 	}
+	
+	//失败返回ff01
+	nus_data_send[0] = 0xff;
+	nus_data_send[1] = 0x01;
+	nus_data_send_length = 2;
+	ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 		
 key_set_exit:
 		return 0;
@@ -389,10 +408,8 @@ static void get_battery_level(uint8_t *p_data, uint16_t length)
 *如果不是第一次设置，则需要通过管理员密码的验证，通过的话，返回设置成功
 *没有通过验证的话，返回设置失败
 ***********************************************************************/
-static void set_super_key(uint8_t *p_data, uint16_t length)
+static int set_super_key(uint8_t *p_data, uint16_t length)
 {
-	static char superkey_set_success[17] = "skey set success";
-	static char superkey_set_false[14] = "skey set fail";
 	//1读取超级管理员存储区内容
 	inter_flash_read(flash_read_data, 16, SPUER_KEY_OFFSET, &block_id_flash_store);		
 	
@@ -415,8 +432,23 @@ static void set_super_key(uint8_t *p_data, uint16_t length)
 	}
 	else
 	{
+		//是不是跟原来密码一致
+		//取存储的超级管理员密码
+		memset(super_key, 0, 12);
+		memcpy(super_key, &flash_read_data[1],12);
+		//1、对比管理员密码是否相同
+		if(strncasecmp((char *)&p_data[1],super_key, SUPER_KEY_LENGTH) == 0)
+		{	
+			//将命令加上0x40,返回给app
+			nus_data_send[0] = p_data[0] + 0x40;
+			nus_data_send[1] = 0x00;
+			nus_data_send_length = 2;
+			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+			goto set_skey_exit;
+		}
+		
 		if(is_superkey_checked == true)
-		{//存在管理员密码，但是验证了管理员密码
+		{//存在管理员密码，但是验证了管理员密码，属于修改密码
 			memset(flash_write_data, 0, BLOCK_STORE_SIZE);
 			memcpy(&flash_write_data[1],&p_data[1], SUPER_KEY_LENGTH);
 			flash_write_data[0] = 'w';//'w'
@@ -431,9 +463,10 @@ static void set_super_key(uint8_t *p_data, uint16_t length)
 			nus_data_send[1] = 0x00;
 			nus_data_send_length = 2;
 			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+			goto set_skey_exit;
 		}
-		else
-		{//已经有管理员密码了,且没有验证管理员密码
+		
+		//已经有管理员密码了,且没有验证管理员密码或者与原密码不一致
 			//向手机发送失败信息"skey set fail"
 		//	ble_nus_string_send(&m_nus, (uint8_t *)superkey_set_false, \
 									strlen(superkey_set_false) );
@@ -442,9 +475,10 @@ static void set_super_key(uint8_t *p_data, uint16_t length)
 			nus_data_send[1] = 0x01;
 			nus_data_send_length = 2;
 			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
-		}
+		
 	}
-	
+	set_skey_exit:
+	return 0;
 }
 
 /*******************************************
@@ -473,22 +507,33 @@ static void check_super_key(uint8_t *p_data, uint16_t length)
 			
 			//将命令加上0x40,返回给app
 			nus_data_send[0] = p_data[0] + 0x40;
-			memcpy(&nus_data_send[1], &p_data[1], (length -1));
-			nus_data_send_length = length;
+			nus_data_send[1] = 0x00;
+			nus_data_send_length = 2;
 			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 		}
 		else
 		{
 			//向手机发送失败信息"skey check fail"
-			ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+		//	ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
 									strlen(checked_superkey_false) );
+			//将命令加上0x40,返回给app
+			nus_data_send[0] = p_data[0] + 0x40;
+			nus_data_send[1] = 0x01;
+			nus_data_send_length = 2;
+			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 		}
 	}
 	else
 	{//未设置管理员密码
 		//向手机发送失败信息"skey not set"
-		ble_nus_string_send(&m_nus, (uint8_t *)superkey_not_set, \
+	//	ble_nus_string_send(&m_nus, (uint8_t *)superkey_not_set, \
 									strlen(superkey_not_set) );
+		
+		//将命令加上0x40,返回给app
+		nus_data_send[0] = p_data[0] + 0x40;
+		nus_data_send[1] = 0x02;
+		nus_data_send_length = 2;
+		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 	}
 
 }
