@@ -27,6 +27,9 @@ struct record_length_struct			record_length;
 bool	key_store_length_setted;
 bool 	record_length_setted;
 
+uint8_t					interflash_write_data[BLOCK_STORE_SIZE];
+uint8_t					interflash_read_data[BLOCK_STORE_SIZE];
+
 pstorage_handle_t		block_id_write;
 pstorage_handle_t		block_id_read;
 
@@ -175,27 +178,56 @@ void flash_init(void)
 	
 }
 
+
 /**********************************************************
 *存储到flash
 *in：	*p_data		写入数据的指针
-			data_len		数据长度
-			block_id_offset		写入的block偏移量
-			*block_di_write		写入的block_id
+		data_len		数据长度
+		block_id_offset		写入的block偏移量
+		*block_di_write		写入的block_id
 **********************************************************/
-void inter_flash_write(uint8_t *p_data, uint32_t data_len,\
-					   pstorage_size_t block_id_offset, pstorage_handle_t *block_id_write_source)
+int interflash_write(uint8_t *p_data, uint32_t data_len,\
+					   pstorage_size_t block_id_offset )
 {		
 	uint32_t err_code;
-	//获取需要存储的位置
-	pstorage_block_identifier_get(block_id_write_source, block_id_offset, &block_id_write);
-	//清除当前存储区域
-	pstorage_clear(&block_id_write, BLOCK_STORE_SIZE);
-	err_code = pstorage_store(&block_id_write, p_data, (pstorage_size_t)data_len, 0);
-	if(err_code ==NRF_SUCCESS)
+	uint8_t data_len_4_left;
+	uint32_t data_len_write;
+	if(data_len <= BLOCK_STORE_SIZE)
 	{
+		//1、判断数据的长度是否是4的倍数，获取要写入的实际字节数
+		data_len_4_left = data_len%4;
+		if(data_len_4_left ==0)
+		{
+			//字节数是4的倍数
+			data_len_write = data_len;
+		}
+		else
+		{
+			//字节数不是4的倍数
+			data_len_write = (data_len +4 - data_len_4_left);
+		}
+	
+		//2、组织要写入的数据数组
+		memset(interflash_write_data, 0, BLOCK_STORE_SIZE);
+		memcpy(interflash_write_data, p_data, data_len);
+	
+		//3、将数据存储到指定的位置
+		//获取需要存储的位置
+		pstorage_block_identifier_get(&block_id_flash_store, block_id_offset, &block_id_write);
+		//清除当前存储区域
+		pstorage_clear(&block_id_write, BLOCK_STORE_SIZE);
+		err_code = pstorage_store(&block_id_write, interflash_write_data, (pstorage_size_t)data_len_write, 0);
+		if(err_code ==NRF_SUCCESS)
+		{
 #if defined(BLE_DOOR_DEBUG)
-		printf("%2d bytes store in flash offset:%i\r\n", data_len, block_id_offset);
+			printf("%2d bytes store in flash offset:%i\r\n", data_len, block_id_offset);
 #endif
+		}
+		return 0;
+	}
+	else
+	{
+		return 1;
 	}
 	
 }
@@ -207,32 +239,79 @@ void inter_flash_write(uint8_t *p_data, uint32_t data_len,\
 			block_id_offset		写入的block偏移量
 			*block_di_read		写入的block_id
 **********************************************************/
-void inter_flash_read(uint8_t *p_data, uint32_t data_len, \
-					 pstorage_size_t block_id_offset, pstorage_handle_t *block_id_read_source)
+int interflash_read(uint8_t *p_data, uint32_t data_len, \
+					 pstorage_size_t block_id_offset)
 {	
 	uint32_t err_code;
-	pstorage_block_identifier_get(block_id_read_source, (pstorage_size_t)block_id_offset, &block_id_read);
-	err_code = pstorage_load(p_data, &block_id_read, (pstorage_size_t)data_len, 0);
-	if(err_code ==NRF_SUCCESS)
+	uint8_t data_len_4_left;
+	uint32_t data_len_read;
+	if(data_len <= BLOCK_STORE_SIZE)
 	{
-#if defined(BLE_DOOR_DEBUG)
+		//1、判断数据的长度是否是4的倍数，获取要写入的实际字节数
+		data_len_4_left = data_len%4;
+		if(data_len_4_left ==0)
+		{
+			//字节数是4的倍数
+			data_len_read = data_len;
+		}
+		else
+		{
+			//字节数不是4的倍数
+			data_len_read = (data_len +4 - data_len_4_left);
+		}
+		memset(interflash_read_data, 0, BLOCK_STORE_SIZE);
+		pstorage_block_identifier_get(&block_id_flash_store, (pstorage_size_t)block_id_offset, &block_id_read);
+		err_code = pstorage_load(interflash_read_data, &block_id_read, (pstorage_size_t)data_len_read, 0);
+		if(err_code ==NRF_SUCCESS)
+		{
+			memset(p_data, 0, data_len);
+			memcpy(p_data, interflash_read_data, data_len);
+#ifdef BLE_DOOR_DEBUG
 		printf("%2d bytes read in flash offset:%i\r\n", data_len, block_id_offset);
 #endif
+		}
+		return 0;
+	}
+	else
+	{
+		return 1;
 	}
 	
 }
+
 
 /*************************************************************************
 *写入管理员秘钥(12位ASCII)
 *in：		*p_data			超级密码的指针
 				data_len			数据的长度
 ************************************************************************/
-void write_super_key(uint8_t *p_data, uint32_t data_len)
+int write_super_key(uint8_t *p_data, uint32_t data_len)
 {	
-	pstorage_block_identifier_get(&block_id_flash_store, (pstorage_size_t)SPUER_KEY_OFFSET, &block_id_super_key);
-	pstorage_clear(&block_id_super_key,BLOCK_STORE_SIZE);
-	pstorage_store(&block_id_super_key, p_data, data_len, 0);
-#if defined(BLE_DOOR_DEBUG)
+	uint8_t data_len_4_left;
+	uint32_t data_len_write;
+	if(data_len <= BLOCK_STORE_SIZE)
+	{
+		//1、判断数据的长度是否是4的倍数，获取要写入的实际字节数
+		data_len_4_left = data_len%4;
+		if(data_len_4_left ==0)
+		{
+			//字节数是4的倍数
+			data_len_write = data_len;
+		}
+		else
+		{
+			//字节数不是4的倍数
+			data_len_write = (data_len +4 - data_len_4_left);
+		}
+		//2、组织要写入的数据数组
+		memset(interflash_write_data, 0, BLOCK_STORE_SIZE);
+		memcpy(interflash_write_data, p_data, data_len);
+	
+		//3、将数据存储到指定的位置	
+		pstorage_block_identifier_get(&block_id_flash_store, (pstorage_size_t)SPUER_KEY_OFFSET, &block_id_super_key);
+		pstorage_clear(&block_id_super_key,BLOCK_STORE_SIZE);
+		pstorage_store(&block_id_super_key, interflash_write_data, data_len_write, 0);
+#ifdef BLE_DOOR_DEBUG
 	printf("super key write:");
 	for(int i=0; i<SUPER_KEY_LENGTH; i++)
 	{//第一位是'w'
@@ -240,6 +319,12 @@ void write_super_key(uint8_t *p_data, uint32_t data_len)
 	}
 	printf("\r\n");
 #endif
+	return 0;
+	}
+	else
+	{
+		return 1;
+	}
 	
 }
 
@@ -273,8 +358,8 @@ void key_store_write(struct key_store_struct *key_store_input)
 	
 	memset(flash_write_key_store_data, 0, BLOCK_STORE_SIZE);
 	memcpy(flash_write_key_store_data,key_store_input, sizeof(struct key_store_struct));
-	inter_flash_write(flash_write_key_store_data, BLOCK_STORE_SIZE, \
-						(pstorage_size_t)(KEY_STORE_OFFSET + key_store_length.key_store_length), &block_id_flash_store);
+	interflash_write(flash_write_key_store_data, BLOCK_STORE_SIZE, \
+						(pstorage_size_t)(KEY_STORE_OFFSET + key_store_length.key_store_length));
 	
 #if defined(BLE_DOOR_DEBUG)
 	printf("key set  success:");
@@ -310,7 +395,7 @@ void record_write(struct door_open_record *open_record)
 	
 	memset(flash_write_record_data, 0, BLOCK_STORE_SIZE);
 	memcpy(flash_write_record_data, open_record, sizeof(struct door_open_record));
-	inter_flash_write(flash_write_record_data, BLOCK_STORE_SIZE,\
-						(pstorage_size_t)(RECORD_OFFSET + record_length.record_length), &block_id_flash_store);
+	interflash_write(flash_write_record_data, BLOCK_STORE_SIZE,\
+						(pstorage_size_t)(RECORD_OFFSET + record_length.record_length));
 
 }

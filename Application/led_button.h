@@ -9,10 +9,18 @@
 
 #include "inter_flash.h"
 
+enum keys_type{
+super_keys= 0x00,
+normal_keys,
+unkown_keys
+};
+
+extern bool			is_key_value_get;//是否是正在获取键盘按键
+
 extern char			key_express_value;
 
-#define KEY_NUMBER	12
-extern char			key_input[KEY_NUMBER];
+#define KEY_MAX_NUMBER	12
+extern char			key_input[KEY_MAX_NUMBER];
 extern uint8_t		key_input_site;
 
 //输入的密码的时间

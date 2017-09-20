@@ -1,7 +1,7 @@
 #ifndef  TOUCH_TSM12_H__
 #define  TOUCH_TSM12_H__
 
-#include "stdint.h"
+#include <stdint.h>
 #include "custom_board.h"
 #include "nrf_drv_gpiote.h"
 #include "nrf_gpiote.h"

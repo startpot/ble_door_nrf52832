@@ -55,7 +55,7 @@ static int cmd_set_key(uint8_t *p_data, uint16_t length)
 			
 	//1、先进行现存密码的比对
 	//获取普通密码的个数,小端字节
-	inter_flash_read(flash_read_data, BLOCK_STORE_SIZE, KEY_STORE_OFFSET, &block_id_flash_store);
+	interflash_read(flash_read_data, BLOCK_STORE_SIZE, KEY_STORE_OFFSET);
 	memcpy(&key_store_length,flash_read_data, sizeof(struct key_store_length_struct));
 		
 	if(key_store_length.key_store_full ==0x1)
@@ -71,8 +71,8 @@ static int cmd_set_key(uint8_t *p_data, uint16_t length)
 		for(int i=0; i<key_store_length_get; i++)
 		{
 			//获取存储的密码
-			inter_flash_read((uint8_t *)&key_store_check, sizeof(struct key_store_struct), \
-												(KEY_STORE_OFFSET + 1 + i), &block_id_flash_store);
+			interflash_read((uint8_t *)&key_store_check, sizeof(struct key_store_struct), \
+												(KEY_STORE_OFFSET + 1 + i));
 			//对比密码是否一致
 			if(strncasecmp((char *)nus_data_recieve, (char *)&key_store_check.key_store, 6) == 0)
 			{//密码相同，看是否在有效时间内，以1分钟为单位
@@ -103,8 +103,8 @@ static int cmd_set_key(uint8_t *p_data, uint16_t length)
 	}	
 		
 	//2、获取种子，进行动态密码对比，对比SET_KEY_CHECK_NUMBER次
-	inter_flash_read(flash_read_data, BLOCK_STORE_SIZE, SEED_OFFSET, &block_id_flash_store);
-	if(flash_read_data[0] == 0x77)
+	interflash_read(flash_read_data, BLOCK_STORE_SIZE, SEED_OFFSET);
+	if(flash_read_data[0] == 'w')
 	{//设置了种子
 		//获取种子
 		memset(seed, 0, 16);
@@ -194,8 +194,16 @@ static void sync_rtc_time(uint8_t *p_data, uint16_t length)
 		{
 			//将命令加上0x40,返回给app
 			nus_data_send[0] = p_data[0] + 0x40;
-			memcpy(&nus_data_send[1], &p_data[1], (length -1));
-			nus_data_send_length = length;
+			nus_data_send[1] = 0x00;
+			nus_data_send_length = 2;
+			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+		}
+		else
+		{
+			//将命令加上0x40,返回给app
+			nus_data_send[0] = p_data[0] + 0x40;
+			nus_data_send[1] = 0x01;
+			nus_data_send_length = 2;
 			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 		}
 	}
@@ -242,8 +250,8 @@ static void get_key_now(uint8_t *p_data, uint16_t length)
 		//将时间变换为64位
 		time_get_t = my_mktime(&time_get);
 		//获取种子
-		inter_flash_read(flash_read_data, 32, SEED_OFFSET, &block_id_flash_store);
-		if(flash_read_data[0] == 0x77)
+		interflash_read(flash_read_data, 32, SEED_OFFSET);
+		if(flash_read_data[0] == 'w')
 		{//设置了种子
 			//获取种子
 			memset(seed, 0, 16);
@@ -269,6 +277,7 @@ static void get_key_now(uint8_t *p_data, uint16_t length)
 **********************************************/
 static void set_param(uint8_t *p_data, uint16_t length)
 {
+	int ret_code;
 	//设置电机转动时间
 	OPEN_TIME = p_data[1];
 	//设置开门时间
@@ -282,19 +291,19 @@ static void set_param(uint8_t *p_data, uint16_t length)
 	//电机的转动方向
 	MOTO_DIR = p_data[6];
 		
-	memset(flash_write_data, 0, 8);
+	memset(flash_write_data, 0, BLOCK_STORE_SIZE);
 	//写入标记'w'
 	flash_write_data[0] = 'w';
-	memcpy(&flash_write_data[1], &p_data[1], 6);
+	memcpy(&flash_write_data[1], &p_data[1], length -1);
 		
 	//将参数写入到flash
-	inter_flash_write(flash_write_data, 8, DEFAULT_PARAMS_OFFSET, &block_id_flash_store);
+	ret_code =  interflash_write(flash_write_data, length, DEFAULT_PARAMS_OFFSET);
 		
 	//应答包
 	//将命令加上0x40,返回给app
 	nus_data_send[0] = p_data[0] + 0x40;
-	memcpy(&nus_data_send[1], &p_data[1], (length -1) );
-	nus_data_send_length = length;
+	nus_data_send[1] = ret_code;
+	nus_data_send_length = 2;
 	ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 	
 }
@@ -304,22 +313,23 @@ static void set_param(uint8_t *p_data, uint16_t length)
 *************************************************/
 static void set_key_seed(uint8_t *p_data, uint16_t length)
 {
+	int ret_code;
 	//传输的种子应该是小端字节
 	memset(flash_write_data, 0, BLOCK_STORE_SIZE);
 	//写入标记'w'
-	flash_write_data[0] = 0x77;
+	flash_write_data[0] = 'w';
 	memcpy(&flash_write_data[1],&p_data[1], SEED_LENGTH);
 		
 	//将种子写入到flash
-	inter_flash_write(flash_write_data, BLOCK_STORE_SIZE, SEED_OFFSET, &block_id_flash_store);
+	ret_code =  interflash_write(flash_write_data, BLOCK_STORE_SIZE, SEED_OFFSET);
 		
 	//应答包
-	//将命令加上0x40,返回给app
-	nus_data_send[0] = p_data[0] + 0x40;
-	memcpy(&nus_data_send[1], &p_data[1], (length -1));
-	nus_data_send_length = length;
-	ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
-	
+
+		//将命令加上0x40,返回给app
+		nus_data_send[0] = p_data[0] + 0x40;
+		nus_data_send[1] = (uint8_t) ret_code;
+		nus_data_send_length = 2;
+		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 }
 
 /***********************************************
@@ -329,7 +339,6 @@ static void set_key_seed(uint8_t *p_data, uint16_t length)
 static void set_mac(uint8_t *p_data, uint16_t length)
 {
 	uint32_t err_code;
-	char set_fail[13] = "set mac fail";
 	if((p_data[6] &0xc0) ==0xc0)
 	{//设置的mac最高2位为11，有效
 		//存储mac地址
@@ -337,7 +346,7 @@ static void set_mac(uint8_t *p_data, uint16_t length)
 		mac[0] = 'w';
 		mac[1] = 0x06;
 		memcpy(&mac[3], &p_data[1], 6);
-		inter_flash_write(mac, 8, MAC_OFFSET, &block_id_flash_store);
+		interflash_write(mac, 8, MAC_OFFSET);
 		//配置mac
 		memset(addr.addr, 0, 6);
 		//拷贝设置的mac
@@ -347,15 +356,18 @@ static void set_mac(uint8_t *p_data, uint16_t length)
 		{
 			//将命令加上0x40,返回给app
 			nus_data_send[0] = p_data[0] + 0x40;
-			memcpy(&nus_data_send[1], &p_data[1], (length -1));
-			nus_data_send_length = length;
+			nus_data_send[1] = 0x00;
+			nus_data_send_length = 2;
 			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 		}
 	}
 	else
 	{
-		//向手机发送失败信息"set mac fail"
-		ble_nus_string_send(&m_nus, (uint8_t *)set_fail, strlen(set_fail) );
+		//将命令加上0x40,返回给app
+		nus_data_send[0] = p_data[0] + 0x40;
+		nus_data_send[1] = 0x01;
+		nus_data_send_length = 2;
+		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 	}
 	
 }
@@ -367,22 +379,24 @@ static void set_mac(uint8_t *p_data, uint16_t length)
 static void get_mac(uint8_t *p_data, uint16_t length)
 {
 	uint32_t err_code;
-	char get_fail[13] = "get mac fail";
 	
 	memset(addr.addr, 0, 6);
 	err_code = sd_ble_gap_address_get(&addr);
 	if(err_code == NRF_SUCCESS)
 	{
-			//将命令加上0x40,返回给app
-			nus_data_send[0] = p_data[0] + 0x40;
-			memcpy(&nus_data_send[1], &addr.addr[0], 6);
-			nus_data_send_length = 6;
-			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+		//将命令加上0x40,返回给app
+		nus_data_send[0] = p_data[0] + 0x40;
+		memcpy(&nus_data_send[1], &addr.addr[0], 6);
+		nus_data_send_length = 6;
+		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 	}
 	else
 	{
-		//向手机发送失败信息"set mac fail"
-		ble_nus_string_send(&m_nus, (uint8_t *)get_fail, strlen(get_fail) );
+		//将命令加上0x40,返回给app
+		nus_data_send[0] = p_data[0] + 0x40;
+		nus_data_send[1] = 0x01;
+		nus_data_send_length = 2;
+		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 	}
 	
 }
@@ -411,18 +425,16 @@ static void get_battery_level(uint8_t *p_data, uint16_t length)
 static int set_super_key(uint8_t *p_data, uint16_t length)
 {
 	//1读取超级管理员存储区内容
-	inter_flash_read(flash_read_data, 16, SPUER_KEY_OFFSET, &block_id_flash_store);		
+	interflash_read(flash_read_data, BLOCK_STORE_SIZE, SPUER_KEY_OFFSET);
 	
 	if( flash_read_data[0] != 'w' )
 	{//没有有管理员密码，直接存储
 		memset(flash_write_data, 0, BLOCK_STORE_SIZE);
+		flash_write_data[0] = 'w';//'w'
 		memcpy(&flash_write_data[1],&p_data[1], SUPER_KEY_LENGTH);
-		flash_write_data[0] = 0x77;//'w'
 		//超级密码就12位，取写入数据前面16位(16>(1+12))
-		write_super_key(flash_write_data,16);
-		//返回设置管理员密码设置成功"skey set success"
-	//	ble_nus_string_send(&m_nus, (uint8_t *)superkey_set_success, \
-									strlen(superkey_set_success) );
+		write_super_key(flash_write_data,SUPER_KEY_LENGTH +1);
+
 		//将命令加上0x40,返回给app
 		nus_data_send[0] = p_data[0] + 0x40;
 		nus_data_send[1] = 0x00;
@@ -434,8 +446,8 @@ static int set_super_key(uint8_t *p_data, uint16_t length)
 	{
 		//是不是跟原来密码一致
 		//取存储的超级管理员密码
-		memset(super_key, 0, 12);
-		memcpy(super_key, &flash_read_data[1],12);
+		memset(super_key, 0, sizeof(super_key));
+		memcpy(super_key, &flash_read_data[1],sizeof(super_key));
 		//1、对比管理员密码是否相同
 		if(strncasecmp((char *)&p_data[1],super_key, SUPER_KEY_LENGTH) == 0)
 		{	
@@ -444,7 +456,7 @@ static int set_super_key(uint8_t *p_data, uint16_t length)
 			nus_data_send[1] = 0x00;
 			nus_data_send_length = 2;
 			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
-			goto set_skey_exit;
+			return 0;
 		}
 		
 		if(is_superkey_checked == true)
@@ -453,31 +465,24 @@ static int set_super_key(uint8_t *p_data, uint16_t length)
 			memcpy(&flash_write_data[1],&p_data[1], SUPER_KEY_LENGTH);
 			flash_write_data[0] = 'w';//'w'
 			//超级密码就12位，取写入数据前面16位(16>(1+12))
-			write_super_key(flash_write_data,16);
-			//返回设置管理员密码设置成功"skey set success"
-		//	ble_nus_string_send(&m_nus, (uint8_t *)superkey_set_success, \
-									strlen(superkey_set_success) );
+			write_super_key(flash_write_data,SUPER_KEY_LENGTH + 1);
 			
 			//将命令加上0x40,返回给app
 			nus_data_send[0] = p_data[0] + 0x40;
 			nus_data_send[1] = 0x00;
 			nus_data_send_length = 2;
 			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
-			goto set_skey_exit;
+			return 0;
 		}
 		
 		//已经有管理员密码了,且没有验证管理员密码或者与原密码不一致
-			//向手机发送失败信息"skey set fail"
-		//	ble_nus_string_send(&m_nus, (uint8_t *)superkey_set_false, \
-									strlen(superkey_set_false) );
+
 			//将命令加上0x40,返回给app
 			nus_data_send[0] = p_data[0] + 0x40;
 			nus_data_send[1] = 0x01;
 			nus_data_send_length = 2;
 			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
-		
 	}
-	set_skey_exit:
 	return 0;
 }
 
@@ -489,10 +494,8 @@ static int set_super_key(uint8_t *p_data, uint16_t length)
 *******************************************/
 static void check_super_key(uint8_t *p_data, uint16_t length)
 {
-	static char checked_superkey_false[16] = "skey check fail";
-	static char superkey_not_set[13] = "skey not set";
 	//1、从flash中读取超级管理员密码
-	inter_flash_read(flash_read_data, 16, SPUER_KEY_OFFSET, &block_id_flash_store);		
+	interflash_read(flash_read_data, 16, SPUER_KEY_OFFSET);		
 	if(flash_read_data[0] == 'w')
 	{//设置了超级管理员密码
 		memset(super_key, 0, 12);
@@ -513,9 +516,7 @@ static void check_super_key(uint8_t *p_data, uint16_t length)
 		}
 		else
 		{
-			//向手机发送失败信息"skey check fail"
-		//	ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
-									strlen(checked_superkey_false) );
+
 			//将命令加上0x40,返回给app
 			nus_data_send[0] = p_data[0] + 0x40;
 			nus_data_send[1] = 0x01;
@@ -525,9 +526,6 @@ static void check_super_key(uint8_t *p_data, uint16_t length)
 	}
 	else
 	{//未设置管理员密码
-		//向手机发送失败信息"skey not set"
-	//	ble_nus_string_send(&m_nus, (uint8_t *)superkey_not_set, \
-									strlen(superkey_not_set) );
 		
 		//将命令加上0x40,返回给app
 		nus_data_send[0] = p_data[0] + 0x40;
@@ -545,7 +543,7 @@ static void get_used_key(uint8_t *p_data, uint16_t length)
 {
 	memset(nus_data_send, 0, BLE_NUS_MAX_DATA_LEN);
 	//获取密码的数量，小端字节
-	inter_flash_read(flash_read_data, BLOCK_STORE_SIZE, KEY_STORE_OFFSET, &block_id_flash_store);
+	interflash_read(flash_read_data, BLOCK_STORE_SIZE, KEY_STORE_OFFSET);
 	memcpy(&key_store_length, flash_read_data, sizeof(struct key_store_length_struct));
 		
 	key_store_length_get = key_store_length.key_store_length;
@@ -570,8 +568,8 @@ static void get_used_key(uint8_t *p_data, uint16_t length)
 		for(int i=0; i<nus_data_send[1]; i++)
 		{
 			nus_data_send[2] = (uint8_t)i;
-			inter_flash_read(flash_read_data, BLOCK_STORE_SIZE, \
-							 (KEY_STORE_OFFSET+1+i), &block_id_flash_store);
+			interflash_read(flash_read_data, BLOCK_STORE_SIZE, \
+							 (KEY_STORE_OFFSET+1+i));
 			memcpy(&nus_data_send[3], flash_read_data, sizeof(struct key_store_struct));
 			ble_nus_string_send(&m_nus, nus_data_send, sizeof(struct key_store_struct)+3);
 		}
@@ -587,7 +585,7 @@ static void get_record_number(uint8_t *p_data, uint16_t length)
 	memset(flash_read_data, 0, BLOCK_STORE_SIZE);
 	memset(nus_data_send, 0, BLE_NUS_MAX_DATA_LEN);
 	//读取记录的数量,小端字节
-	inter_flash_read(flash_read_data, BLOCK_STORE_SIZE, RECORD_OFFSET, &block_id_flash_store);
+	interflash_read(flash_read_data, BLOCK_STORE_SIZE, RECORD_OFFSET);
 	memcpy(&record_length,flash_read_data, sizeof(struct record_length_struct));
 		
 	nus_data_send[0] = p_data[0] + 0x40;
@@ -611,7 +609,6 @@ static void get_record_number(uint8_t *p_data, uint16_t length)
 *****************************************/
 static void get_recent_record(uint8_t *p_data, uint16_t length)
 {
-	char no_record[10] = "no record";
 	memset(nus_data_send, 0, BLE_NUS_MAX_DATA_LEN);
 	time_record_compare.tm_sec = p_data[7];
 	time_record_compare.tm_min = p_data[6];
@@ -623,7 +620,7 @@ static void get_recent_record(uint8_t *p_data, uint16_t length)
 	time_record_compare_t = my_mktime(&time_record_compare);
 	//获取记录的数量,小端字节
 	//读取记录的数量,小端字节
-	inter_flash_read(flash_read_data, BLOCK_STORE_SIZE, RECORD_OFFSET, &block_id_flash_store);
+	interflash_read(flash_read_data, BLOCK_STORE_SIZE, RECORD_OFFSET);
 	memcpy(&record_length,flash_read_data, sizeof(struct record_length_struct));
 		
 	if(record_length.record_full ==0x1)
@@ -632,8 +629,8 @@ static void get_recent_record(uint8_t *p_data, uint16_t length)
 		for(int i=0; i<RECORD_NUMBER; i++)
 		{
 			//读出记录
-			inter_flash_read(flash_read_data, BLOCK_STORE_SIZE, \
-								(RECORD_OFFSET+1+i), &block_id_flash_store);
+			interflash_read(flash_read_data, BLOCK_STORE_SIZE, \
+								(RECORD_OFFSET+1+i));
 			memcpy(&door_open_record_get, flash_read_data, sizeof(struct door_open_record));
 			//对比时间
 			if(my_difftime(door_open_record_get.door_open_time, time_record_compare_t)>0)
@@ -652,8 +649,8 @@ static void get_recent_record(uint8_t *p_data, uint16_t length)
 		for(int i=0; i<record_length.record_length; i++)
 		{
 			//读出记录
-			inter_flash_read(flash_read_data, BLOCK_STORE_SIZE, \
-								(RECORD_OFFSET+1+i), &block_id_flash_store);
+			interflash_read(flash_read_data, BLOCK_STORE_SIZE, \
+								(RECORD_OFFSET+1+i));
 			memcpy(&door_open_record_get, flash_read_data, sizeof(struct door_open_record));
 			//对比时间
 			if(my_difftime(door_open_record_get.door_open_time, time_record_compare_t)>0)
@@ -667,8 +664,11 @@ static void get_recent_record(uint8_t *p_data, uint16_t length)
 		}
 	}
 	else
-	{//无记录，发送no record
-		ble_nus_string_send(&m_nus, (uint8_t *)no_record, strlen(no_record) );
+	{//无记录
+		nus_data_send[0] = p_data[0] + 0x40;
+		nus_data_send[2] = 0x00;
+		nus_data_send_length  = 2;
+		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 	}
 	
 }

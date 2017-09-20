@@ -41,7 +41,8 @@
 #include "uicr_config.h"
 
 #include "led_button.h"
-#include "touch_tsm12.h"
+//#include "touch_tsm12.h"
+#include "wt5700.h"
 #include "moto.h"
 #include "beep.h"
 #include "rtc_chip.h"
@@ -186,14 +187,15 @@ int main(void)
 	//beep test
 //	beep_didi(5);
 	//初始化触摸屏
-	tsm12_init();
+//	tsm12_init();
+	wt5700_init();
 	//初始化RTC
 	rtc_init();
 	//初始化触摸屏和指纹的中断函数
 	touch_finger_int_init();
 	
 	//设置配对密码
-	set_peer_password();
+//	set_peer_password();
 
 	application_timers_start();
     err_code = ble_advertising_start(BLE_ADV_MODE_FAST);

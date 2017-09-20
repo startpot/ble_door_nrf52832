@@ -24,6 +24,7 @@ struct key_store_length_struct
 };
 
 #define SUPER_KEY_LENGTH		12
+#define KEY_LENGTH				6
 //超级管理员秘钥
 extern char						super_key[SUPER_KEY_LENGTH];
 
@@ -41,12 +42,25 @@ struct record_length_struct
 	uint32_t record_full;
 };
 
-/********************************************************
+/*********************************************************************************
 *flash存储空间整个一个block_id
 *[0]存储参数+[1]钥匙个数+钥匙记录(10)+[12]长度+开门记录[30]
 * flash中各个存储量的偏移地址和长度
-*********************************************************/
-#define BLOCK_STORE_SIZE			32
+----------------------------------------------------------------------------------
+		内部flash存储结构图
+----------------------------------------------------------------------------------
+-block_id_flash_store	BLOCK_STORE_SIZE * BLOCK_STORE_COUNT--
+----------------------------------------------------------------------------------
+block_offset				-|-		size				
+----------------------------------------------------------------------------------
+DEFAULT_PARAMS_OFFSET (0)	-|-		DEFAULT_PARAMS_NUMBER (1)
+MAC_OFFSET (1)				-|-		MAC_NUMBER (1)
+SPUER_KEY_OFFSET (2)		-|-		SUPER_KEY_NUMBER (1)
+SEED_OFFSET (3)				-|-		SEED_NUMBER (1)
+DEVICE_NAME_OFFSET (4)		-|-		DEVICE_NAME_NUMBER (1)
+KEY_STORE_OFFSET (5)		-|-		KEY_STORE_LENGTH (1) + KEY_STORE_NUMBER (10)
+RECORD_OFFSET (16)			-|-		RECORD_LENGTH (1) +  RECORD_NUMBER(30)
+**********************************************************************************/
 
 /*********************************************************
 *默认的参数:(1byte)
@@ -85,6 +99,8 @@ struct record_length_struct
 									KEY_STORE_LENGTH + KEY_STORE_NUMBER + \
 									RECORD_LENGTH + RECORD_NUMBER
 
+#define BLOCK_STORE_SIZE			32
+
 #define SEED_LENGTH					16
 
 
@@ -104,6 +120,11 @@ extern struct record_length_struct			record_length;
 extern bool				key_store_length_setted;
 extern bool				record_length_setted;
 
+//内部flash读取和存储
+extern uint8_t					interflash_write_data[BLOCK_STORE_SIZE];
+extern uint8_t					interflash_read_data[BLOCK_STORE_SIZE];
+
+
 extern pstorage_handle_t			block_id_write;
 extern pstorage_handle_t			block_id_read;
 //从flash中读出的数据
@@ -116,12 +137,14 @@ extern uint8_t					flash_write_record_data[BLOCK_STORE_SIZE];
 extern uint8_t					flash_read_temp[BLOCK_STORE_SIZE];
 
 void flash_init(void);
-void inter_flash_write(uint8_t *p_data, uint32_t data_len, \
-					   pstorage_size_t block_id_offset, pstorage_handle_t *block_id_write_source);
-void inter_flash_read(uint8_t *p_data, uint32_t data_len, \
-					 pstorage_size_t block_id_offset, pstorage_handle_t *block_id_read_source);
 
-void write_super_key(uint8_t *p_data, uint32_t data_len);
+int interflash_write(uint8_t *p_data, uint32_t data_len, \
+					 pstorage_size_t block_id_offset);
+
+int interflash_read(uint8_t *p_data, uint32_t data_len, \
+					 pstorage_size_t block_id_offset);
+
+int write_super_key(uint8_t *p_data, uint32_t data_len);
 void key_store_write(struct key_store_struct *key_store_input);
 void record_write(struct door_open_record *open_record);
 

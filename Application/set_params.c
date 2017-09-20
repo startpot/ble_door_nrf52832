@@ -19,7 +19,6 @@ uint8_t key_store_tmp[6];
 //种子的数组
 uint8_t seed[16];
 
-uint8_t KEY_LENGTH;
 uint8_t	KEY_CHECK_NUMBER;
 uint8_t LED_LIGHT_TIME;
 
@@ -43,7 +42,6 @@ void set_default_params(void)
 	uint32_t err_code;
 
 	//设置动态密码的长度为6位ASCII
-	KEY_LENGTH = 6;
 	KEY_CHECK_NUMBER = 5;
 	LED_LIGHT_TIME = 5;
 	

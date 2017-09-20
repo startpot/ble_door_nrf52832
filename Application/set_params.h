@@ -20,7 +20,6 @@ extern uint8_t seed[16];
 extern pstorage_handle_t block_id_params;
 extern uint8_t flash_store_params[8];
 
-extern uint8_t 	KEY_LENGTH;
 extern uint8_t	KEY_CHECK_NUMBER;
 extern uint8_t 	LED_LIGHT_TIME;
 

@@ -502,8 +502,8 @@ void advertising_init(void)
     ble_adv_modes_config_t options = {0};
     options.ble_adv_fast_enabled  = BLE_ADV_FAST_ENABLED;
     options.ble_adv_fast_interval = APP_ADV_INTERVAL;
-    options.ble_adv_fast_timeout  = APP_ADV_TIMEOUT_IN_SECONDS;
-//	options.ble_adv_fast_timeout  = 0;
+ //   options.ble_adv_fast_timeout  = APP_ADV_TIMEOUT_IN_SECONDS;
+	options.ble_adv_fast_timeout  = 0;
 
     err_code = ble_advertising_init(&advdata, &scanrsp, &options, on_adv_evt, NULL);
     APP_ERROR_CHECK(err_code);
@@ -613,8 +613,8 @@ static uint32_t device_manager_evt_handler(dm_handle_t const * p_handle,
     //        if (m_dm_handle.device_id != DM_INVALID_ID)
             {
 				//在有蓝牙设备请求连接的时候，开启安全请求的timer
-                err_code = app_timer_start(m_sec_req_timer_id, SECURITY_REQUEST_DELAY, NULL);
-                APP_ERROR_CHECK(err_code);
+//                err_code = app_timer_start(m_sec_req_timer_id, SECURITY_REQUEST_DELAY, NULL);
+//                APP_ERROR_CHECK(err_code);
             }
 		break;
 		case DM_EVT_DISCONNECTION:
