@@ -21,13 +21,15 @@
 #include "r301t.h"
 #include "battery.h"
 
-struct key_store_struct				key_store_struct_set;
 
-struct door_open_record				door_open_record_get;
 struct tm 	time_record;//读出记录的时间
 time_t 		time_record_t;//读出的时间的int
 struct tm 	time_record_compare;//要对比的时间
 time_t 		time_record_compare_t;//要对比的时间的int
+
+struct tm				fp_set_tm;//指纹设置的时间
+time_t					fp_set_time_t;//指纹设置的时间int
+struct fp_store_struct	fp_store_struct_set;//指纹设置的结构体
 
 //与获取和设置时间相关的变量
 struct tm					time_set;
@@ -45,7 +47,7 @@ bool		is_superkey_checked = false;
 static int cmd_set_key(uint8_t *p_data, uint16_t length)
 {
 	uint32_t err_code;
-	
+	bool is_keys_checked = false;
 	//获取收到的时间
 	err_code = rtc_time_read(&time_get);
 	if(err_code == NRF_SUCCESS)
@@ -54,109 +56,37 @@ static int cmd_set_key(uint8_t *p_data, uint16_t length)
 	}
 			
 	//1、先进行现存密码的比对
-	//获取普通密码的个数,小端字节
-	interflash_read(flash_read_data, BLOCK_STORE_SIZE, KEY_STORE_OFFSET);
-	memcpy(&key_store_length,flash_read_data, sizeof(struct key_store_length_struct));
-		
-	if(key_store_length.key_store_full ==0x1)
+	is_keys_checked = keys_input_check_normal_keys(p_data, 6, time_get_t);
+	if(is_keys_checked == true)
 	{
-		key_store_length_get = KEY_STORE_NUMBER;
-	}
-	else if(key_store_length.key_store_length >0)
-	{
-		key_store_length_get = key_store_length.key_store_length;
-	}
-	if(key_store_length_get >0)
-	{//先进行已存储的密码对比
-		for(int i=0; i<key_store_length_get; i++)
-		{
-			//获取存储的密码
-			interflash_read((uint8_t *)&key_store_check, sizeof(struct key_store_struct), \
-												(KEY_STORE_OFFSET + 1 + i));
-			//对比密码是否一致
-			if(strncasecmp((char *)nus_data_recieve, (char *)&key_store_check.key_store, 6) == 0)
-			{//密码相同，看是否在有效时间内，以1分钟为单位
-				if((double)(my_difftime(time_get_t, key_store_check.key_store_time) <\
-							((double)key_store_check.key_use_time * 60)) )
-				{
-					ble_door_open();
-#if defined(BLE_DOOR_DEBUG)
-					printf("it is a dynamic key user set\r\n");
-					printf("door open\r\n");
-#endif
-					//记录开门
-					memset(&open_record_now, 0, sizeof(struct door_open_record));
-					memcpy(&open_record_now.key_store, p_data, 6);
-					memcpy(&open_record_now.door_open_time, &time_get_t, 4);
-					record_write(&open_record_now);
+		//开门
+		ble_door_open();
+		//记录开门
+		door_open_record_flash((char *)p_data, 6, time_get_t);
 					
-					//返回ff00
-					nus_data_send[0] = 0xff;
-					nus_data_send[1] = 0x00;
-					nus_data_send_length = 2;
-					ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
-					
-					goto key_set_exit;
-				}
-			}					
-		}
-	}	
+		//返回ff00
+		nus_data_send[0] = 0xff;
+		nus_data_send[1] = 0x00;
+		nus_data_send_length = 2;
+		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+		return 0;
+	}
 		
 	//2、获取种子，进行动态密码对比，对比SET_KEY_CHECK_NUMBER次
-	interflash_read(flash_read_data, BLOCK_STORE_SIZE, SEED_OFFSET);
-	if(flash_read_data[0] == 'w')
-	{//设置了种子
-		//获取种子
-		memset(seed, 0, 16);
-		memcpy(seed, &flash_read_data[1], 16);
-		
-		//对比SET_KEY_CHECK_NUMBER次设置的密码
-		for(int i=0; i<SET_KEY_CHECK_NUMBER; i++)
-		{
-			SM4_DPasswd(seed, time_get_t, SM4_INTERVAL, SM4_COUNTER, SM4_challenge, key_store_tmp);
-
-			if(strncasecmp((char *)p_data, (char *)key_store_tmp, KEY_LENGTH) == 0)
-			{//设置的密码相同
-
-				//组织密码结构体
-				memset(&key_store_struct_set, 0 , sizeof(struct key_store_struct));
-				//写密码
-				memcpy(&key_store_struct_set.key_store, p_data, 6);
-				//写有效时间
-				memcpy(&key_store_struct_set.key_use_time, &p_data[6], 2);
-				//写控制字
-				memcpy(&key_store_struct_set.control_bits, &p_data[8], 1);
-				//写版本号
-				memcpy(&key_store_struct_set.key_vesion, &p_data[9], 1);
-				//写存入时间
-				memcpy(&key_store_struct_set.key_store_time, &time_get_t, sizeof(time_t));
-	
-				//直接将钥匙记录到flash
-				key_store_write(&key_store_struct_set);
-#if defined(BLE_DOOR_DEBUG)
-				printf("key set success\r\n");
-#endif
-				//开门
-				ble_door_open();
-				//记录开门
-				memset(&open_record_now, 0, sizeof(struct door_open_record));
-				memcpy(&open_record_now.key_store, p_data, 6);
-				memcpy(&open_record_now.door_open_time, &time_get_t, sizeof(time_t));
-				record_write(&open_record_now);
+	is_keys_checked = keys_input_check_sm4_keys(p_data, 6, time_get_t);
+	if(is_keys_checked == true)
+	{
+		//开门
+		ble_door_open();
+		//记录开门
+		door_open_record_flash((char *)p_data, 6, time_get_t);
 				
-				//返回ff00
-				nus_data_send[0] = 0xff;
-				nus_data_send[1] = 0x00;
-				nus_data_send_length = 2;
-				ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
-					
-				goto key_set_exit;
-			}
-			else
-			{
-				time_get_t = time_get_t - 60;
-			}
-		}
+		//返回ff00
+		nus_data_send[0] = 0xff;
+		nus_data_send[1] = 0x00;
+		nus_data_send_length = 2;
+		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);			
+		return 0;
 	}
 	
 	//失败返回ff01
@@ -164,9 +94,7 @@ static int cmd_set_key(uint8_t *p_data, uint16_t length)
 	nus_data_send[1] = 0x01;
 	nus_data_send_length = 2;
 	ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
-		
-key_set_exit:
-		return 0;
+	return 0;
 	
 }
 
@@ -771,6 +699,32 @@ static void send_fig_r301t_cmd(uint8_t *p_data, uint16_t length)
 	
 }
 
+/********************************************************
+*设置指纹的有效时间
+********************************************************/
+static void fp_store_set(uint8_t *p_data, uint16_t length)
+{
+	int err_code;
+	//1、获取设置指纹的时间
+	rtc_time_read(&fp_set_tm);
+	fp_set_time_t = my_mktime(&fp_set_tm);
+	//2、组织指纹的结构体
+	memset(&fp_store_struct_set, 0, sizeof(struct fp_store_struct));
+	fp_store_struct_set.fp_wr_flag = 'w';
+	fp_store_struct_set.fp_id = p_data[1]*(0x100) + p_data[2];
+	fp_store_struct_set.fp_use_time = p_data[3]*(0x100) + p_data[4];
+	fp_store_struct_set.fp_store_time = fp_set_time_t;
+	
+	//3、将指纹密码结构体存储在flash中
+	err_code = fp_write(&fp_store_struct_set);
+	//4、将结果返回给上位机
+	//将命令加上0x40,返回给app
+	nus_data_send[0] = p_data[0] + 0x40;
+	nus_data_send[1] = err_code;
+	nus_data_send_length = 2;
+	ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+}
+
 /************************************************************
 *对nus servvice传来的数据进行分析
 *in：	*p_data			处理的数据指针
@@ -965,6 +919,23 @@ void operate_code_check(uint8_t *p_data, uint16_t length)
 					//向手机发送失败信息"skey check fail"
 					ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
 									strlen(checked_superkey_false) );
+				}
+			}
+		break;
+			
+		case SET_FP_USE_TIME://设置指纹的有效时间
+			if(length == 5)
+			{
+				if(is_superkey_checked == true)//如果验证了超级密码
+				{
+					fp_store_set(p_data, length);
+				}
+				else
+				{
+					//向手机发送失败信息"skey check fail"
+					ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+									strlen(checked_superkey_false) );
+			
 				}
 			}
 		break;

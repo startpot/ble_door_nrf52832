@@ -89,12 +89,12 @@ static void saadc_callback(nrf_drv_saadc_evt_t const * p_event)
 		if(battery_level_value <= (uint16_t)(VOL_VALUE)<<4)//0x02c0 大致为5.0V
 		{
 			//亮起*灯
-			nrf_gpio_pin_clear(LED_8);
+		//	nrf_gpio_pin_clear(LED_8);
 		}
 		else
 		{
 			//否则灭*灯
-			nrf_gpio_pin_set(LED_8);
+		//	nrf_gpio_pin_set(LED_8);
 		}
     }
 	
@@ -124,7 +124,8 @@ static void battery_level_en(void)
 {
 	//设置引脚为输出，置低
 	nrf_gpio_cfg_output( BATTERY_LEVEL_EN );
-	nrf_gpio_pin_set( BATTERY_LEVEL_EN );
+	nrf_gpio_pin_clear( BATTERY_LEVEL_EN );
+//	nrf_gpio_pin_set( BATTERY_LEVEL_EN );
 	
 	//设置电压测量引脚为输入
 	nrf_gpio_cfg_input(BATTERY_LEVEL_IN, NRF_GPIO_PIN_NOPULL);

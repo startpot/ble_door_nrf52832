@@ -9,13 +9,15 @@
 #include "inter_flash.h"
 #include "ble_nus.h"
 
-extern struct key_store_struct 		key_store_struct_set;
 
-extern struct door_open_record		door_open_record_get;
 extern struct tm				time_record;
 extern time_t					time_record_t;
 extern struct tm				time_record_compare;
 extern time_t					time_record_compare_t;
+
+extern struct tm				fp_set_tm;
+extern time_t					fp_set_time_t;
+extern struct fp_store_struct	fp_store_struct_set;
 
 //与获取和设置时间相关的变量
 extern struct tm				time_set;
@@ -52,6 +54,9 @@ extern bool		is_superkey_checked;
 
 
 #define	GET_KEY_NOW				0x87	//TODO 后期移除
+
+
+#define SET_FP_USE_TIME			0x70	//设置指纹有效期
 
 
 void operate_code_check(uint8_t *p_data, uint16_t length);

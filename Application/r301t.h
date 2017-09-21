@@ -1,6 +1,13 @@
 #ifndef R301T_H__
 #define R301T_H__
 
+
+#include <stdint.h>
+#include <stdbool.h>
+
+#include "inter_flash.h"
+
+
 /**********************************************************
 *r301t是一个指纹模块，容量0x0bb8  (3000)
 *   pin1------5v
@@ -114,6 +121,8 @@
 
 extern bool		is_r301t_autoenroll;
 extern uint8_t 	r301t_autosearch_step;
+
+extern struct fp_store_struct fp_store_struct_get;
 
 void fig_r301t_send_getimage(void);
 void fig_r301t_send_cmd(uint8_t	data_id, uint16_t data_len, uint8_t	*data_code);

@@ -1,6 +1,6 @@
 /********************************
-*	初始化LEDs
-*	初始化I2C的int_pin和中断处理函数
+*初始化LEDs
+*初始化I2C的int_pin和中断处理函数
 *********************************/
 #include <stdio.h>
 #include <stdint.h>
@@ -48,6 +48,11 @@ uint8_t		key_input_site;
 struct		tm key_input_time_tm;
 time_t		key_input_time_t;
 
+//检测密码的次数
+uint8_t		key_input_checked_number = 0;
+time_t		key_input_checked_locked_time_t;
+bool		key_input_checked_locked = false;
+
 struct key_store_struct			key_store_check;
 
 //存储在flash的密码
@@ -80,7 +85,7 @@ void leds_init(void)
 /***********************************************
 *LED等亮ms
 *in:	led_pin	操作的led引脚
-		ms			led亮起的时间，单位0.1s
+ms			led亮起的时间，单位0.1s
 ***********************************************/
 void leds_on(uint8_t led_pin, uint32_t ms)
 {
@@ -138,7 +143,7 @@ int ble_door_open(void)
 		beep_didi(BEEP_DIDI_NUMBER);
 		//恢复moto状态
 		moto_close(OPEN_TIME);
-		goto exit;
+		return 0;
 	}
 	else
 	{
@@ -151,17 +156,143 @@ int ble_door_open(void)
 		beep_didi(BEEP_DIDI_NUMBER);
 		//恢复moto状态
 		moto_open(OPEN_TIME);
-		goto exit;
 	}
-exit:
+	
 	return 0;
 
+}
+
+/***************************
+*对比超级管理员密码
+***************************/
+bool keys_input_check_super_keys(char *keys_input_p, uint8_t keys_input_length)
+{
+	//读取管理员密码
+	interflash_read(flash_read_data, 16, SPUER_KEY_OFFSET);		
+	if(flash_read_data[0] == 'w')
+	{//超级密码设置了
+		//将读取的密码存储到超级管理员密码数组中
+		memset(super_key, 0, 12);
+		memcpy(super_key, &flash_read_data[1],12);
+		//对比
+		if(strncasecmp(keys_input_p,super_key, SUPER_KEY_LENGTH) == 0)
+		{
+			//密码为真
+#if defined(BLE_DOOR_DEBUG)
+			printf("it is spuer key\r\n");
+#endif
+			return true;
+		}
+	}
+	else
+	{
+		//密码为假
+		return false;
+	}
+	
+}
+
+/*************************************
+*对比已经存储的密码
+*************************************/
+bool keys_input_check_normal_keys(char *keys_input_p, uint8_t keys_input_length, time_t keys_input_time_t)
+{
+	//普通密码
+	//获取普通密码的个数,小端字节
+	interflash_read(flash_read_data, BLOCK_STORE_SIZE, KEY_STORE_OFFSET);
+	memcpy(&key_store_length,flash_read_data, sizeof(struct key_store_length_struct));
+		
+	if(key_store_length.key_store_full ==0x1)
+	{	//存储已满
+		key_store_length_get = KEY_STORE_NUMBER;
+	}
+	else 
+	{	//存储未满
+		key_store_length_get = key_store_length.key_store_length;
+	}
+		
+	//密码数量不为0，进行存储密码的对比
+	if(key_store_length_get >0)
+	{
+		for(int i=0; i<key_store_length_get; i++)
+		{
+			//获取存储的密码
+			interflash_read((uint8_t *)&key_store_check, sizeof(struct key_store_struct), \
+													(KEY_STORE_OFFSET + 1 + i));
+			//对比密码是否一致
+			if( ( strncasecmp(keys_input_p, (char *)&key_store_check.key_store, KEY_LENGTH) == 0 ) &&\
+						( (double)my_difftime(keys_input_time_t, key_store_check.key_store_time) < (double)key_store_check.key_use_time * 60) )
+			{//密码相同，且在有效时间内
+					
+				//密码为真
+#if defined(BLE_DOOR_DEBUG)
+				printf("it is a dynamic key user set\r\n");
+#endif
+				return true;
+			}
+		}
+	}
+	return false;
+
+}
+
+/*************************************
+* 对比动态种子产生的密钥
+*************************************/
+bool keys_input_check_sm4_keys(char *keys_input_p, uint8_t keys_input_length, time_t keys_input_time_t)
+{
+	//动态密码，获取种子
+	interflash_read(flash_read_data, 32, SEED_OFFSET);
+	if(flash_read_data[0] == 'w')
+	{	//设置了种子
+		//获取种子16位，128bit
+		memset(seed, 0, 16);
+		memcpy(seed, &flash_read_data[1], 16);
+			
+		//计算KEY_CHECK_NUMBER 次数
+		for(int i = 0; i<(KEY_CHECK_NUMBER );i++)
+		{
+			SM4_DPasswd(seed, keys_input_time_t, SM4_INTERVAL, SM4_COUNTER, \
+								SM4_challenge, key_store_tmp);
+			if(strncasecmp(keys_input_p, (char *)key_store_tmp, KEY_LENGTH) == 0)
+			{//密码相同		
+				//记录密码
+				//组织密码结构体
+				memset(&key_store_struct_set, 0 , sizeof(struct key_store_struct));
+				//写密码
+				memcpy(&key_store_struct_set.key_store, keys_input_p, 6);
+				//写有效时间
+				key_store_struct_set.key_use_time = (uint16_t)KEY_INPUT_USE_TIME*10;
+				//写控制字
+				key_store_struct_set.control_bits = 0;
+				//写版本号
+				key_store_struct_set.key_vesion = 0;
+				//写存入时间
+				memcpy(&key_store_struct_set.key_store_time, &keys_input_time_t, sizeof(time_t));
+				//直接将钥匙记录到flash
+				key_store_write(&key_store_struct_set);
+#if defined(BLE_DOOR_DEBUG)
+				printf("key set success\r\n");
+#endif
+				//密码为真
+#if defined(BLE_DOOR_DEBUG)
+				printf("it is a dynamic key auto set\r\n");
+#endif	
+				return true;
+			}
+			else
+			{
+				keys_input_time_t = keys_input_time_t - 60;
+			}
+		}
+	}
+	return false;
 }
 
 /*****************************************
 *将指定位数的密码和系统密码对比，返回结果
 ******************************************/
-static bool keys_input_check(char *keys_input, uint8_t keys_input_length,time_t keys_input_time_t)
+static bool keys_input_check(char *keys_input_p, uint8_t keys_input_length,time_t keys_input_time_t)
 {
 	bool is_keys_checked = false;
 	enum  keys_type keys_input_type;
@@ -185,128 +316,40 @@ static bool keys_input_check(char *keys_input, uint8_t keys_input_length,time_t 
 	//2.1、首先进行超级管理员密码对比
 	if(keys_input_type == super_keys)
 	{
-		//读取管理员密码
-		interflash_read(flash_read_data, 16, SPUER_KEY_OFFSET);		
-		if(flash_read_data[0] == 'w')
-		{//超级密码设置了
-			//将读取的密码存储到超级管理员密码数组中
-			memset(super_key, 0, 12);
-			memcpy(super_key, &flash_read_data[1],12);
-			//对比
-			if(strncasecmp(key_input,super_key, SUPER_KEY_LENGTH) == 0)
-			{
-				//密码为真
-				is_keys_checked = true;
-#if defined(BLE_DOOR_DEBUG)
-				printf("it is spuer key\r\n");
-#endif
-			}
-		}
+		is_keys_checked = keys_input_check_super_keys(keys_input_p, keys_input_length);
+		return is_keys_checked;
 	}//2.2、其次进行存储密码和动态密码对比
 	else if(keys_input_type == normal_keys)
 	{
 		//6位密码，首先进行存储密码的比对，再进行动态密码比对
 		
-		//普通密码
-		//获取普通密码的个数,小端字节
-		interflash_read(flash_read_data, BLOCK_STORE_SIZE, KEY_STORE_OFFSET);
-		memcpy(&key_store_length,flash_read_data, sizeof(struct key_store_length_struct));
-		
-		if(key_store_length.key_store_full ==0x1)
-		{	//存储已满
-			key_store_length_get = KEY_STORE_NUMBER;
-		}
-		else 
-		{	//存储未满
-			key_store_length_get = key_store_length.key_store_length;
-		}
-		
-		//密码数量不为0，进行存储密码的对比
-		if(key_store_length_get >0)
+		is_keys_checked = keys_input_check_normal_keys(keys_input_p, keys_input_length, keys_input_time_t);
+		if(is_keys_checked == true)
 		{
-			for(int i=0; i<key_store_length_get; i++)
-			{
-				//获取存储的密码
-				interflash_read((uint8_t *)&key_store_check, sizeof(struct key_store_struct), \
-													(KEY_STORE_OFFSET + 1 + i));
-				//对比密码是否一致
-				if( ( strncasecmp(key_input, (char *)&key_store_check.key_store, KEY_LENGTH) == 0 ) &&\
-						( (double)my_difftime(key_input_time_t, key_store_check.key_store_time) < (double)key_store_check.key_use_time * 60) )
-					{//密码相同，且在有效时间内
-					
-						//密码为真
-						is_keys_checked = true;
-#if defined(BLE_DOOR_DEBUG)
-						printf("it is a dynamic key user set\r\n");
-#endif
-						//记录开门
-						memset(&open_record_now, 0, sizeof(struct door_open_record));
-						memcpy(&open_record_now.key_store, key_input, 6);
-						memcpy(&open_record_now.door_open_time, &key_input_time_t, 4);
-						record_write(&open_record_now);
-					}
-				break;
-			}
+			return true;
 		}
-		
-		if(is_keys_checked != true)
+		else
 		{//未在存储密码中对比成功，进行动态密码对比
-			//动态密码，获取种子
-			interflash_read(flash_read_data, 32, SEED_OFFSET);
-			if(flash_read_data[0] == 'w')
-			{//设置了种子
-				//获取种子16位，128bit
-				memset(seed, 0, 16);
-				memcpy(seed, &flash_read_data[1], 16);
-			
-				//计算KEY_CHECK_NUMBER 次数
-				for(int i = 0; i<(KEY_CHECK_NUMBER );i++)
-				{
-					SM4_DPasswd(seed, key_input_time_t, SM4_INTERVAL, SM4_COUNTER, \
-								SM4_challenge, key_store_tmp);
-					if(strncasecmp(key_input, (char *)key_store_tmp, KEY_LENGTH) == 0)
-					{//密码相同		
-						//记录密码
-						//组织密码结构体
-						memset(&key_store_struct_set, 0 , sizeof(struct key_store_struct));
-						//写密码
-						memcpy(&key_store_struct_set.key_store, key_input, 6);
-						//写有效时间
-						key_store_struct_set.key_use_time = (uint16_t)KEY_INPUT_USE_TIME*10;
-						//写控制字
-						key_store_struct_set.control_bits = 0;
-						//写版本号
-						key_store_struct_set.key_vesion = 0;
-						//写存入时间
-						memcpy(&key_store_struct_set.key_store_time, &key_input_time_t, sizeof(time_t));
-						//直接将钥匙记录到flash
-						key_store_write(&key_store_struct_set);
-#if defined(BLE_DOOR_DEBUG)
-						printf("key set success\r\n");
-#endif
-						//密码为真
-						is_keys_checked = true;
-#if defined(BLE_DOOR_DEBUG)
-						printf("it is a dynamic key auto set\r\n");
-#endif	
-						//记录开门
-						memset(&open_record_now, 0, sizeof(struct door_open_record));
-						memcpy(&open_record_now.key_store, key_input, 6);
-						memcpy(&open_record_now.door_open_time, &key_input_time_t, sizeof(time_t));
-						record_write(&open_record_now);
-					}
-					else
-					{
-						key_input_time_t = key_input_time_t - 60;
-					}
-					break;
-				}					
-			}	
-	
+			is_keys_checked = keys_input_check_sm4_keys(keys_input_p, keys_input_length, keys_input_time_t);
 		}
 	}
 	return is_keys_checked;
 	
+}
+
+/******************************
+*记录开门
+******************************/
+void door_open_record_flash(char *keys_input_p, uint8_t keys_input_length,time_t keys_input_time_t)
+{
+	//记录开门
+	if(keys_input_length == 6)
+	{
+	memset(&open_record_now, 0, sizeof(struct door_open_record));
+	memcpy(&open_record_now.key_store, keys_input_p, keys_input_length);
+	memcpy(&open_record_now.door_open_time, &keys_input_time_t, 4);
+	record_write(&open_record_now);
+	}
 }
 
 /**************************************************************
@@ -314,23 +357,62 @@ static bool keys_input_check(char *keys_input, uint8_t keys_input_length,time_t 
 **************************************************************/
 static void check_keys(void)
 {
+	static bool is_check_locked = false;
 	//获取按下开锁键的时间
 	rtc_time_read(&key_input_time_tm);
 	key_input_time_t = my_mktime(&key_input_time_tm);
-		
-	//判断输入的按键值
-	if(keys_input_check(key_input, key_input_site, key_input_time_t))
+	
+	//1、判断验证是否锁定了
+	if(key_input_checked_locked ==true )
 	{
-		ble_door_open();
-#ifdef BLE_DOOR_DEBUG
-	printf("door open\r\n");
-#endif	
+		//1.1、是的话验证下输入的时间和锁定的时间是不是差10分钟
+		if( (double)my_difftime(key_input_time_t, key_input_checked_locked_time_t) >= (10*60) )
+		{
+			//大于10分钟，则解除验证锁定
+			is_check_locked = false;
+		}
+		else//1.2
+		{
+			//小于10分钟，锁定验证
+			is_check_locked = true;
+		}
 	}
-	else
+	else//2
+	{	
+		is_check_locked = false;
+	}
+	
+	
+	//3.如果验证没锁定
+	if(is_check_locked == false)
 	{
+		//判断输入的按键值
+		if(keys_input_check(key_input, key_input_site, key_input_time_t))
+		{
+			ble_door_open();
+			key_input_checked_number = 0;
+			key_input_checked_locked_time_t = 0;
+			key_input_checked_locked = false;
 #ifdef BLE_DOOR_DEBUG
-	printf("input keys check fail\r\n");
+			printf("door open\r\n");
 #endif	
+			
+			//记录开门
+			door_open_record_flash(key_input, key_input_site, key_input_time_t);
+		}
+		else
+		{
+			key_input_checked_number++;
+			if(key_input_checked_number == KEY_INPUT_CHECKED_MAX_NUMBER)
+			{
+				//记录第5次验证失败的时间
+				key_input_checked_locked_time_t = key_input_time_t;
+				key_input_checked_locked = true;
+			}
+#ifdef BLE_DOOR_DEBUG
+			printf("input keys check fail\r\n");
+#endif	
+		}
 	}
 	
 	//判断完输入的按键序列后，删除所有按键值
@@ -363,7 +445,12 @@ static void check_key_express(char express_value)
 	{
 		if(board_buttons[i] == express_value)
 		{
-			leds_on(board_leds[i], LED_LIGHT_TIME);
+			//leds_on(board_leds[i], LED_LIGHT_TIME);
+			//设置引脚为输出，置低
+			nrf_gpio_cfg_output( BATTERY_LEVEL_EN );
+			nrf_gpio_pin_set( BATTERY_LEVEL_EN );
+			nrf_delay_ms(500);
+			nrf_gpio_pin_clear( BATTERY_LEVEL_EN );
 		}
 	}
 	//如果按键是'b'，检验所有按键，其他键则记录下来

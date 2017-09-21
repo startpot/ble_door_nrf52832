@@ -24,6 +24,10 @@ pstorage_handle_t		block_id_record;
 struct key_store_length_struct		key_store_length;
 struct record_length_struct			record_length;
 
+struct key_store_struct				key_store_struct_set;
+struct door_open_record				door_open_record_get;
+
+
 bool	key_store_length_setted;
 bool 	record_length_setted;
 
@@ -398,4 +402,26 @@ void record_write(struct door_open_record *open_record)
 	interflash_write(flash_write_record_data, BLOCK_STORE_SIZE,\
 						(pstorage_size_t)(RECORD_OFFSET + record_length.record_length));
 
+}
+
+/************************************************
+*将指纹密码和有效时间，设置时间存储在内部flash
+************************************************/
+int fp_write(struct fp_store_struct *fp_store_struct_p)
+{
+	int err_code;
+	err_code = interflash_write((uint8_t *) fp_store_struct_p, sizeof(struct fp_store_struct), \
+					(pstorage_size_t)(FP_STORE_OFFSET + fp_store_struct_p->fp_id));
+	return err_code;
+}
+
+/*************************************************
+*读取内部flash中指定位置的
+*************************************************/
+int fp_read(struct fp_store_struct *fp_store_struct_p, uint16_t fp_id_read)
+{
+	int err_code;
+	err_code = interflash_read((uint8_t *)fp_store_struct_p, sizeof(struct fp_store_struct), \
+					(pstorage_size_t)(FP_STORE_OFFSET + fp_id_read));
+	return err_code;
 }

@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
 
 #include "nordic_common.h"
 
@@ -11,10 +12,17 @@
 #include "beep.h"
 #include "led_button.h"
 #include "ble_init.h"
+#include "rtc_chip.h"
+#include "my_time.h"
 
 
 bool		is_r301t_autoenroll = false;
 uint8_t 	r301t_autosearch_step = 0;
+
+
+struct tm		fingprint_checked_tm;
+time_t 			fingprint_checked_time_t;//指纹验证通过的时间
+struct fp_store_struct fp_store_struct_get;//从内部flash中获取的指纹信息
 
 void fig_r301t_send_getimage(void)
 {
@@ -82,6 +90,7 @@ void fig_r301t_send_cmd(uint8_t	data_id, uint16_t data_len, uint8_t	*data_code)
 *********************************************/
 void fig_r301t_reply_check(void)
 {
+	static uint8_t 		fp_keys_tmp[6];
 	static uint16_t 	reply_data_len;
 	static uint32_t		send_time;
 	static uint32_t		send_left;
@@ -184,7 +193,46 @@ void fig_r301t_reply_check(void)
 						//最后一步，判断结果
 						if(fig_recieve_data[9] == 0)
 						{	//返回搜索到了指纹
-						ble_door_open();
+							
+							//记录指纹开锁
+							//1.组织开锁记录(6B)(fp，2B的指纹ID，2B的matchscore)+时间
+							//1.1获取指纹验证通过的时间
+							rtc_time_read(&fingprint_checked_tm);
+							fingprint_checked_time_t = my_mktime(&fingprint_checked_tm);
+							
+							//1.2 读取存储的指纹信息
+							fp_read(&fp_store_struct_get, (fig_recieve_data[12]*(0x100) + fig_recieve_data[13]));
+							
+							//1.3如果设置了有效时间
+							if(fp_store_struct_get.fp_wr_flag == 'w')
+							{
+								goto fp_check_use_time;
+							}
+							else
+							{
+								goto fp_uncheck_use_time;
+							}
+														
+		fp_check_use_time:							
+							if((double)my_difftime(fingprint_checked_time_t, fp_store_struct_get.fp_store_time) >= \
+														(fp_store_struct_get.fp_use_time* 60))
+							{
+							
+		fp_uncheck_use_time:
+								//开锁
+								ble_door_open();
+								//1.2.1组织指纹的密码结构
+								memset(&open_record_now, 0, sizeof(struct door_open_record));
+								fp_keys_tmp[0] = 'f';
+								fp_keys_tmp[1] = 'p';
+								memcpy(&fp_keys_tmp[2], &fig_recieve_data[10], 2);
+								memcpy(&fp_keys_tmp[4], &fig_recieve_data[12], 2);
+							
+								memcpy(&open_record_now.key_store, fp_keys_tmp, 6);
+								memcpy(&open_record_now.door_open_time, &key_input_time_t, 4);
+								//1.2.2记录指纹开锁
+								record_write(&open_record_now);
+							}
 						}
 						//设置步骤为0，状态为false
 						r301t_autosearch_step = 0;
