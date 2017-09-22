@@ -27,6 +27,8 @@ extern time_t					time_get_t;
 extern uint32_t				record_length_get;
 extern uint32_t				key_store_length_get;
 
+
+extern uint8_t				fp_cmd_code;
 extern bool		is_superkey_checked;
 
 /**********************************

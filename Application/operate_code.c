@@ -39,6 +39,8 @@ time_t						time_get_t;
 uint32_t					record_length_get;
 uint32_t					key_store_length_get;
 
+uint8_t				fp_cmd_code;
+
 bool		is_superkey_checked = false;
 
 /***********************************
@@ -56,7 +58,7 @@ static int cmd_set_key(uint8_t *p_data, uint16_t length)
 	}
 			
 	//1、先进行现存密码的比对
-	is_keys_checked = keys_input_check_normal_keys(p_data, 6, time_get_t);
+	is_keys_checked = keys_input_check_normal_keys((char *)p_data, 6, time_get_t);
 	if(is_keys_checked == true)
 	{
 		//开门
@@ -73,7 +75,7 @@ static int cmd_set_key(uint8_t *p_data, uint16_t length)
 	}
 		
 	//2、获取种子，进行动态密码对比，对比SET_KEY_CHECK_NUMBER次
-	is_keys_checked = keys_input_check_sm4_keys(p_data, 6, time_get_t);
+	is_keys_checked = keys_input_check_sm4_keys((char *)p_data, 6, time_get_t);
 	if(is_keys_checked == true)
 	{
 		//开门
@@ -353,7 +355,7 @@ static void get_battery_level(uint8_t *p_data, uint16_t length)
 static int set_super_key(uint8_t *p_data, uint16_t length)
 {
 	//1读取超级管理员存储区内容
-	interflash_read(flash_read_data, BLOCK_STORE_SIZE, SPUER_KEY_OFFSET);
+	interflash_read(flash_read_data, BLOCK_STORE_SIZE, SUPER_KEY_OFFSET);
 	
 	if( flash_read_data[0] != 'w' )
 	{//没有有管理员密码，直接存储
@@ -423,7 +425,7 @@ static int set_super_key(uint8_t *p_data, uint16_t length)
 static void check_super_key(uint8_t *p_data, uint16_t length)
 {
 	//1、从flash中读取超级管理员密码
-	interflash_read(flash_read_data, 16, SPUER_KEY_OFFSET);		
+	interflash_read(flash_read_data, 16, SUPER_KEY_OFFSET);		
 	if(flash_read_data[0] == 'w')
 	{//设置了超级管理员密码
 		memset(super_key, 0, 12);
@@ -670,6 +672,21 @@ static void send_fig_r301t_cmd(uint8_t *p_data, uint16_t length)
 	static uint8_t fig_r301t_autoenroll_reply[12]= {0xEF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF,\
 													0x07, 0x00, 0x03, 0x00, \
 													0x00, 0x0A};
+	
+													
+	//获取指令码
+	fp_cmd_code = p_data[9];
+	
+													
+	//判断指令码
+	if(fp_cmd_code == GR_FIG_CMD_AUTOENROLL || \
+			fp_cmd_code == GR_FIG_CMD_DELCHAR || \
+			fp_cmd_code == GR_FIG_CMD_EMPTY)
+		{
+		//打开指纹芯片电源电源
+		nrf_gpio_pin_set(BATTERY_LEVEL_EN);
+		}
+																				
 	//判断是不是自动注册命令
 	if(p_data[GR_FIG_DATA_ID_SITE] == GR_FIG_DATA_ID_CMD && \
 		p_data[GR_FIG_CMD_SITE]==GR_FIG_CMD_AUTOENROLL)

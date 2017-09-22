@@ -312,7 +312,7 @@ int write_super_key(uint8_t *p_data, uint32_t data_len)
 		memcpy(interflash_write_data, p_data, data_len);
 	
 		//3、将数据存储到指定的位置	
-		pstorage_block_identifier_get(&block_id_flash_store, (pstorage_size_t)SPUER_KEY_OFFSET, &block_id_super_key);
+		pstorage_block_identifier_get(&block_id_flash_store, (pstorage_size_t)SUPER_KEY_OFFSET, &block_id_super_key);
 		pstorage_clear(&block_id_super_key,BLOCK_STORE_SIZE);
 		pstorage_store(&block_id_super_key, interflash_write_data, data_len_write, 0);
 #ifdef BLE_DOOR_DEBUG

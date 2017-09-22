@@ -5,6 +5,7 @@
 #include <time.h>
 
 #include "nordic_common.h"
+#include "nrf_gpio.h"
 
 #include "app_uart.h"
 
@@ -14,6 +15,8 @@
 #include "ble_init.h"
 #include "rtc_chip.h"
 #include "my_time.h"
+#include "custom_board.h"
+#include "operate_code.h"
 
 
 bool		is_r301t_autoenroll = false;
@@ -142,6 +145,15 @@ void fig_r301t_reply_check(void)
 			}		
 		}
 		
+		//判断发送包指令码
+		if(fp_cmd_code == GR_FIG_CMD_STORECHAR || \
+			fp_cmd_code == GR_FIG_CMD_DELCHAR || \
+			fp_cmd_code == GR_FIG_CMD_EMPTY)
+		{
+		//关闭指纹芯片电源电源
+		nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
+		}
+		
 		
 		//分析数据包,如果不是自动注册模式,且是手指按下进入了搜索模式
 		if(is_r301t_autoenroll ==false)
@@ -232,6 +244,10 @@ void fig_r301t_reply_check(void)
 								memcpy(&open_record_now.door_open_time, &key_input_time_t, 4);
 								//1.2.2记录指纹开锁
 								record_write(&open_record_now);
+								
+								//关闭指纹芯片电源电源
+								nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
+								
 							}
 						}
 						//设置步骤为0，状态为false

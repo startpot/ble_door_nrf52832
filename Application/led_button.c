@@ -79,6 +79,8 @@ void leds_init(void)
 #if defined(BLE_DOOR_DEBUG)	
 	printf("all leds not lit\r\n");
 #endif
+	nrf_gpio_cfg_output( BATTERY_LEVEL_EN );
+	nrf_gpio_pin_clear( BATTERY_LEVEL_EN );
 
 }
 
@@ -168,7 +170,7 @@ int ble_door_open(void)
 bool keys_input_check_super_keys(char *keys_input_p, uint8_t keys_input_length)
 {
 	//读取管理员密码
-	interflash_read(flash_read_data, 16, SPUER_KEY_OFFSET);		
+	interflash_read(flash_read_data, 16, SUPER_KEY_OFFSET);		
 	if(flash_read_data[0] == 'w')
 	{//超级密码设置了
 		//将读取的密码存储到超级管理员密码数组中
@@ -447,7 +449,6 @@ static void check_key_express(char express_value)
 		{
 			//leds_on(board_leds[i], LED_LIGHT_TIME);
 			//设置引脚为输出，置低
-			nrf_gpio_cfg_output( BATTERY_LEVEL_EN );
 			nrf_gpio_pin_set( BATTERY_LEVEL_EN );
 			nrf_delay_ms(500);
 			nrf_gpio_pin_clear( BATTERY_LEVEL_EN );
@@ -481,6 +482,7 @@ static void touch_finger_int_handler(uint32_t event_pins_low_to_high, uint32_t e
 		key_express_value = (char)wt5700_key_read();
 		check_key_express(key_express_value);
 		}
+		is_key_value_get = false;
 	}
 	if (event_pins_high_to_low & (1 << FIG_WAKE_N_PIN))
 	{
@@ -493,11 +495,13 @@ static void touch_finger_int_handler(uint32_t event_pins_low_to_high, uint32_t e
 		
 		if(r301t_autosearch_step == 0 && is_r301t_autoenroll == false)
 		{
-		//指纹模块r301t
-		//发送获取图像命令
-		fig_r301t_send_getimage();
-		//设置步骤为1
-		r301t_autosearch_step = 1;
+			//打开模块芯片电源
+			nrf_gpio_pin_set(BATTERY_LEVEL_EN);
+			//指纹模块r301t
+			//发送获取图像命令
+			fig_r301t_send_getimage();
+			//设置步骤为1
+			r301t_autosearch_step = 1;
 		}
 	}
 
