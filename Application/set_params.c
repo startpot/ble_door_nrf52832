@@ -55,7 +55,7 @@ void set_default_params(void)
 								(pstorage_size_t)DEFAULT_PARAMS_OFFSET, &block_id_params);
 	APP_ERROR_CHECK(err_code);
 	pstorage_load(flash_store_params, &block_id_params, 8, 0);
-	if(flash_store_params[0] == 0x77)
+	if(flash_store_params[0] == 'w')
 	{
 		OPEN_TIME = flash_store_params[1];//电机转动时间
 		DOOR_OPEN_HOLD_TIME = flash_store_params[2];//开门保持时间
@@ -73,6 +73,7 @@ void set_default_params(void)
 		KEY_INPUT_USE_TIME = 0x05;//键盘密码输入密码有效时间，以10min为单位
 		MOTO_DIR = 0;
 	}
+	
 #if defined(BLE_DOOR_DEBUG)
 	printf("params set:\r\n");
 	printf("moto time:%d\r\n", OPEN_TIME);

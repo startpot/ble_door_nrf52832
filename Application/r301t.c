@@ -55,8 +55,8 @@ void fig_r301t_send_cmd(uint8_t	data_id, uint16_t data_len, uint8_t	*data_code)
 	//模块地址
 	for(int i=GR_FIG_ADDR_SITE; i<(GR_FIG_ADDR_SITE+4); i++)
 	{
-		send_data[i] = GR_FIG_ADDR/(pow(2,(8*(3-i))));
-		
+		send_data[i] = (GR_FIG_ADDR>>(8*(i-GR_FIG_ADDR_SITE)) &0xff);
+
 	}
 	//包标识
 	send_data[GR_FIG_DATA_ID_SITE] = data_id;
@@ -66,32 +66,30 @@ void fig_r301t_send_cmd(uint8_t	data_id, uint16_t data_len, uint8_t	*data_code)
 	//包内容
 	if(data_code !=NULL)
 	{
-	for(int n=9; n<(7+data_len); n++)
-	{
-		send_data[n] = data_code[n-9];
+	memcpy(&send_data[9], data_code, data_len -2);
 	}
-	}
-	
+
 	//校验和,从6位开始计算
-	for(int j=6; j<7+data_len; j++)
+	for(int j=6; j<(7 +1+ data_len -1); j++)
 	{
 		sum = sum+send_data[j];
 	}
-	send_data[GR_FIG_DATA_LEN_SITE+data_len - 1] = (sum/0x100);
-	send_data[GR_FIG_DATA_LEN_SITE+data_len] = (sum &0xFF);
-	
+	send_data[GR_FIG_DATA_LEN_SITE +1+data_len - 1] = (sum/0x100);
+	send_data[GR_FIG_DATA_LEN_SITE+1+ data_len] = (sum &0xFF);
+
 	//将命令通过uart发送给指纹模块
 	for (uint32_t m = 0; m < (9 + data_len); m++)
 	{
 		while(app_uart_put(send_data[m]) != NRF_SUCCESS);
+    //    printf("%02X ",send_data[m]);
 	}
-	
+
 }
 
 /*********************************************
 *指纹模块的应答处理
 *********************************************/
-void fig_r301t_reply_check(void)
+int fig_r301t_reply_check(void)
 {
 	static uint8_t 		fp_keys_tmp[6];
 	static uint16_t 	reply_data_len;
@@ -105,7 +103,21 @@ void fig_r301t_reply_check(void)
 												0x01,0x00,0x08,0x04,\
 												0x01,0x00,0x00,0x0b,0xb8,\
 												0x00,0xd1};
-																													
+	
+	static uint8_t		send_genchar2_data[13] = {0xEF,0x01,0xFF,0xFF,0xFF,0xFF,\
+												 0x01,0x00,0x04,0x02,0x02, \
+												 0x00,0x09};
+	
+	static uint8_t		send_regmodel_data[12] = {0xEF,0x01,0xFF,0xFF,0xFF,0xFF,\
+												 0x01,0x00,0x03,0x05, \
+												 0x00,0x09};
+	
+	static uint8_t		send_storechar_data[15] = {0xEF,0x01,0xFF,0xFF,0xFF,0xFF,\
+												 0x01,0x00,0x06,0x06,0x02,0x00,0x00, \
+												 0x00,0x0f};
+	
+	static uint16_t		sum_data;
+	static uint16_t		store_id;
 																				
 	//获取包长度
 	reply_data_len = fig_recieve_data[GR_FIG_DATA_LEN_SITE]*0x100 + \
@@ -257,8 +269,37 @@ void fig_r301t_reply_check(void)
 				}
 			}
 		}
+		/*
+		else//自动注册模式
+		{
+			if(r301t_autoenroll_step > 0)
+			{
+				//上位机设置自动注册模式
+				if(fig_recieve_data[9] !== 0x00)
+				{
+					//应答包，失败
+					goto autoenroll_fail;
+				}
+				else
+				{
+					//第1步的话，设置步骤为2，发送第2个指令
+					if( r301t_autoenroll_step == 1 )
+					{
+						
+					}
+				}
+			}
+		}
+		*/
+		
 		//收到数据长度清零
 		fig_recieve_data_length = 0;
+		return 0;
+autoenroll_fail:
+	//设置步骤为0，接收数据长度清零
+	r301t_autoenroll_step = 0x00;
+	fig_recieve_data_length = 0;
+	return 0;
 	}
-	
+
 }

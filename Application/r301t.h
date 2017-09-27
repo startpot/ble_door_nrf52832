@@ -126,6 +126,6 @@ extern struct fp_store_struct fp_store_struct_get;
 
 void fig_r301t_send_getimage(void);
 void fig_r301t_send_cmd(uint8_t	data_id, uint16_t data_len, uint8_t	*data_code);
-void fig_r301t_reply_check(void);
+int fig_r301t_reply_check(void);
 
 #endif   //R301T_H__

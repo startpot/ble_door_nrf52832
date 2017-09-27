@@ -169,6 +169,14 @@ int ble_door_open(void)
 ***************************/
 bool keys_input_check_super_keys(char *keys_input_p, uint8_t keys_input_length)
 {
+	static char keys_input_check[13];
+	static char super_key_store[13];
+	
+	//将输入的变成字符串
+	memset(keys_input_check, 0, 13);
+	memcpy(keys_input_check, keys_input_p, keys_input_length);
+	keys_input_check[keys_input_length] = '\0';
+	
 	//读取管理员密码
 	interflash_read(flash_read_data, 16, SUPER_KEY_OFFSET);		
 	if(flash_read_data[0] == 'w')
@@ -176,8 +184,15 @@ bool keys_input_check_super_keys(char *keys_input_p, uint8_t keys_input_length)
 		//将读取的密码存储到超级管理员密码数组中
 		memset(super_key, 0, 12);
 		memcpy(super_key, &flash_read_data[1],12);
+		
+		//变超级密码为字符串
+		memset(super_key_store, 0, 13);
+		memcpy(super_key_store, super_key, 12);
+		super_key_store[12] = '\0';
+		
 		//对比
-		if(strncasecmp(keys_input_p,super_key, SUPER_KEY_LENGTH) == 0)
+	//	if(strncasecmp(keys_input_p,super_key, SUPER_KEY_LENGTH) == 0)
+		if(strstr(keys_input_p, super_key) != NULL)
 		{
 			//密码为真
 #if defined(BLE_DOOR_DEBUG)
@@ -199,6 +214,14 @@ bool keys_input_check_super_keys(char *keys_input_p, uint8_t keys_input_length)
 *************************************/
 bool keys_input_check_normal_keys(char *keys_input_p, uint8_t keys_input_length, time_t keys_input_time_t)
 {
+	static char keys_input_check[7];
+	static char normal_keys_store[7];
+	
+	//将输入密码变成字符串
+	memset(keys_input_check, 0, 7);
+	memcpy(keys_input_check, keys_input_p, 6);
+	keys_input_check[6] = '\0';
+	
 	//普通密码
 	//获取普通密码的个数,小端字节
 	interflash_read(flash_read_data, BLOCK_STORE_SIZE, KEY_STORE_OFFSET);
@@ -221,8 +244,13 @@ bool keys_input_check_normal_keys(char *keys_input_p, uint8_t keys_input_length,
 			//获取存储的密码
 			interflash_read((uint8_t *)&key_store_check, sizeof(struct key_store_struct), \
 													(KEY_STORE_OFFSET + 1 + i));
+			memset(normal_keys_store, 7, 0);
+			memcpy(normal_keys_store, key_store_check.key_store, 6);
+			normal_keys_store[6] = '\0';
 			//对比密码是否一致
-			if( ( strncasecmp(keys_input_p, (char *)&key_store_check.key_store, KEY_LENGTH) == 0 ) &&\
+		//	if( ( strncasecmp(keys_input_p, (char *)&key_store_check.key_store, KEY_LENGTH) == 0 ) &&\
+						( (double)my_difftime(keys_input_time_t, key_store_check.key_store_time) < (double)key_store_check.key_use_time * 60) )
+			if( ( strstr(normal_keys_store, keys_input_check) != NULL ) &&\
 						( (double)my_difftime(keys_input_time_t, key_store_check.key_store_time) < (double)key_store_check.key_use_time * 60) )
 			{//密码相同，且在有效时间内
 					
@@ -243,6 +271,14 @@ bool keys_input_check_normal_keys(char *keys_input_p, uint8_t keys_input_length,
 *************************************/
 bool keys_input_check_sm4_keys(char *keys_input_p, uint8_t keys_input_length, time_t keys_input_time_t)
 {
+	static char keys_input_check[7];
+	static char sm4_keys_store[7];
+	
+	//将输入密码变成字符串
+	memset(keys_input_check, 0, 7);
+	memcpy(keys_input_check, keys_input_p, 6);
+	keys_input_check[6] = '\0';
+	
 	//动态密码，获取种子
 	interflash_read(flash_read_data, 32, SEED_OFFSET);
 	if(flash_read_data[0] == 'w')
@@ -256,7 +292,13 @@ bool keys_input_check_sm4_keys(char *keys_input_p, uint8_t keys_input_length, ti
 		{
 			SM4_DPasswd(seed, keys_input_time_t, SM4_INTERVAL, SM4_COUNTER, \
 								SM4_challenge, key_store_tmp);
-			if(strncasecmp(keys_input_p, (char *)key_store_tmp, KEY_LENGTH) == 0)
+			memset(sm4_keys_store, 0, 7);
+			memcpy(sm4_keys_store, key_store_tmp, 6);
+			sm4_keys_store[6] = '\0';
+			
+			
+		//	if(strncasecmp(keys_input_p, (char *)key_store_tmp, KEY_LENGTH) == 0)
+			if(strstr(sm4_keys_store, keys_input_check) != NULL)
 			{//密码相同		
 				//记录密码
 				//组织密码结构体

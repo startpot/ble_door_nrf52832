@@ -41,7 +41,8 @@ uint32_t					key_store_length_get;
 
 uint8_t				fp_cmd_code;
 
-bool		is_superkey_checked = false;
+bool				is_superkey_checked = false;
+uint8_t				r301t_autoenroll_step = 0;//自动注册的步骤
 
 /***********************************
 *设置开锁密码命令
@@ -50,6 +51,7 @@ static int cmd_set_key(uint8_t *p_data, uint16_t length)
 {
 	uint32_t err_code;
 	bool is_keys_checked = false;
+
 	//获取收到的时间
 	err_code = rtc_time_read(&time_get);
 	if(err_code == NRF_SUCCESS)
@@ -693,6 +695,9 @@ static void send_fig_r301t_cmd(uint8_t *p_data, uint16_t length)
 	{
 		//设置标志位为true
 		is_r301t_autoenroll = true;
+		//设置步骤为1
+		r301t_autoenroll_step = 1;
+		
 		//发送上位机返回包
 		memcpy(nus_data_send, fig_r301t_autoenroll_reply,sizeof(fig_r301t_autoenroll_reply));
 		nus_data_send_length = sizeof(fig_r301t_autoenroll_reply);

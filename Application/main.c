@@ -164,7 +164,7 @@ int main(void)
 	
 	//从内部flash中读取mac，设置
 	set_mac_from_interflash();
-	
+
 	
     gap_params_init();
     services_init();

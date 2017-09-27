@@ -29,7 +29,9 @@ extern uint32_t				key_store_length_get;
 
 
 extern uint8_t				fp_cmd_code;
-extern bool		is_superkey_checked;
+extern bool					is_superkey_checked;
+
+extern uint8_t				r301t_autoenroll_step;
 
 /**********************************
 * 数据包的分析
