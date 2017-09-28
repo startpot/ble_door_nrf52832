@@ -27,9 +27,6 @@ time_t 		time_record_t;//读出的时间的int
 struct tm 	time_record_compare;//要对比的时间
 time_t 		time_record_compare_t;//要对比的时间的int
 
-struct tm				fp_set_tm;//指纹设置的时间
-time_t					fp_set_time_t;//指纹设置的时间int
-struct fp_store_struct	fp_store_struct_set;//指纹设置的结构体
 
 //与获取和设置时间相关的变量
 struct tm					time_set;
@@ -39,10 +36,18 @@ time_t						time_get_t;
 uint32_t					record_length_get;
 uint32_t					key_store_length_get;
 
-uint8_t				fp_cmd_code;
+uint8_t				ble_operate_code;
+
+uint8_t				fig_cmd_code;
 
 bool				is_superkey_checked = false;
 uint8_t				r301t_autoenroll_step = 0;//自动注册的步骤
+
+uint8_t				enroll_fig_info_data[4];//注册指纹信息
+uint8_t				delete_fig_info_data[4];//删除指纹信息
+uint8_t 			enroll_fig_id[2];	//注册指纹的ID号
+uint8_t				delete_fig_id[2];	//删除指纹的ID号
+
 
 /***********************************
 *设置开锁密码命令
@@ -610,10 +615,6 @@ static void get_recent_record(uint8_t *p_data, uint16_t length)
 **************************************/
 static void user_unbind_cmd(uint8_t *p_data, uint16_t length)
 {
-	
-	static uint8_t fig_r301t_empty_cmd[12]= {0xEF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF,\
-													0x01, 0x00, 0x03, 0x0d, \
-													0x00, 0x11};
 	//用户解除绑定
 	//1、清除内部flash所有数据
 						
@@ -627,10 +628,12 @@ static void user_unbind_cmd(uint8_t *p_data, uint16_t length)
 	}
 	
 	//2、清除指纹内所有存储指纹
-	for (uint32_t i = 0; i < 12; i++)
-	{
-		while(app_uart_put(fig_r301t_empty_cmd[i]) != NRF_SUCCESS);
-	}
+	//2.1、打开指纹模块电源
+	nrf_gpio_pin_set(BATTERY_LEVEL_EN);
+	//2.2、发送删除指令
+	fig_r301t_send_cmd(0x01, sizeof(r301t_send_empty_cmd), r301t_send_empty_cmd);
+	//2.3、获取指令码,此指令码需要在回复命令处理中使用
+	fig_cmd_code = r301t_send_empty_cmd[0];
 	//3、向上位机发送结果
 	//将命令加上0x40,返回给app
 	nus_data_send[0] = p_data[0] + 0x40;
@@ -639,10 +642,6 @@ static void user_unbind_cmd(uint8_t *p_data, uint16_t length)
 	ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 	
 }
-
-
-
-
 
 /*******************************************************
 *指纹模块fm260b命令处理,主要调用uart端口
@@ -675,15 +674,14 @@ static void send_fig_r301t_cmd(uint8_t *p_data, uint16_t length)
 													0x07, 0x00, 0x03, 0x00, \
 													0x00, 0x0A};
 	
-													
 	//获取指令码
-	fp_cmd_code = p_data[9];
+	fig_cmd_code = p_data[9];
 	
 													
 	//判断指令码
-	if(fp_cmd_code == GR_FIG_CMD_AUTOENROLL || \
-			fp_cmd_code == GR_FIG_CMD_DELCHAR || \
-			fp_cmd_code == GR_FIG_CMD_EMPTY)
+	if(fig_cmd_code == GR_FIG_CMD_AUTOENROLL || \
+			fig_cmd_code == GR_FIG_CMD_DELCHAR || \
+			fig_cmd_code == GR_FIG_CMD_EMPTY)
 		{
 		//打开指纹芯片电源电源
 		nrf_gpio_pin_set(BATTERY_LEVEL_EN);
@@ -721,31 +719,122 @@ static void send_fig_r301t_cmd(uint8_t *p_data, uint16_t length)
 	
 }
 
-/********************************************************
-*设置指纹的有效时间
-********************************************************/
-static void fp_store_set(uint8_t *p_data, uint16_t length)
+
+/**************************************
+*注册指纹
+**************************************/
+static int enroll_fig(uint8_t *p_data, uint16_t length)
 {
-	int err_code;
-	//1、获取设置指纹的时间
-	rtc_time_read(&fp_set_tm);
-	fp_set_time_t = my_mktime(&fp_set_tm);
-	//2、组织指纹的结构体
-	memset(&fp_store_struct_set, 0, sizeof(struct fp_store_struct));
-	fp_store_struct_set.fp_wr_flag = 'w';
-	fp_store_struct_set.fp_id = p_data[1]*(0x100) + p_data[2];
-	fp_store_struct_set.fp_use_time = p_data[3]*(0x100) + p_data[4];
-	fp_store_struct_set.fp_store_time = fp_set_time_t;
-	
-	//3、将指纹密码结构体存储在flash中
-	err_code = fp_write(&fp_store_struct_set);
-	//4、将结果返回给上位机
+	uint16_t empty_1st_id;//第一个为空的id号
+	//1、获取指纹ID号
+	//读取flash中
+	for(int i = 0; i < FIG_INFO_NUMBER; i++)
+	{
+		//1.1、获取内部flash存储区的信息
+		pstorage_block_identifier_get(&block_id_flash_store, \
+						(pstorage_size_t)(FIG_INFO_OFFSET+i), &block_id_fig_info);
+		memset(&fig_info_get, 0, sizeof(struct fig_info));
+		pstorage_load((uint8_t *)&fig_info_get, &block_id_fig_info, sizeof(struct fig_info), 0);
+		if(fig_info_get.is_store ==0xffffffff)
+		{
+			//1.1.1、未存储，获取要存储的id号
+			empty_1st_id = i;
+			//跳转执行存储
+			goto exe_enroll_fig;
+		}
+	}
+	//1.1.2、遍历完后，没有空的fig，返回错误
 	//将命令加上0x40,返回给app
 	nus_data_send[0] = p_data[0] + 0x40;
-	nus_data_send[1] = err_code;
+	nus_data_send[1] = 0xff;
 	nus_data_send_length = 2;
 	ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+	return 0;
+	
+exe_enroll_fig:
+	//2、获取要存储的id号,大端字节
+	memset(enroll_fig_id, 0, 2);
+	enroll_fig_id[0] = empty_1st_id / 0x100;
+	enroll_fig_id[1] = empty_1st_id & 0xff;
+	//3、获取存储的指纹信息模块
+	memset(&fig_info_set, 0, sizeof(struct fig_info));
+	memcpy(fig_info_set.fig_info_data, &p_data[1], 4);//指纹描述信息
+	fig_info_set.is_store = 'w';
+	fig_info_set.fig_info_id = empty_1st_id;
+	
+	//4、打开指纹模块电源
+	nrf_gpio_pin_set(BATTERY_LEVEL_EN);
+	//上电需要0.5s的准备时间
+	nrf_delay_ms(1000);
+	//5、设置,开始注册,注册步骤为1
+	is_r301t_autoenroll = true;
+	r301t_autoenroll_step = 1;
+	//6、取指令码
+	ble_operate_code = p_data[0];
+	fig_cmd_code = GR_FIG_CMD_GETIMG;
+	//7、发送指纹模块命令
+	fig_r301t_send_cmd(0x01, sizeof(r301t_send_getimg_cmd), \
+										r301t_send_getimg_cmd);
 }
+
+/**************************************
+*删除指纹
+**************************************/
+static int delete_fig(uint8_t *p_data, uint16_t length)
+{
+	uint16_t marry_fig_id;//匹配的指纹id
+	uint8_t r301t_send_deletechar_idx_cmd[5];
+	//1、获取指纹ID号
+	//读取flash中
+	for(int i = 0; i < FIG_INFO_NUMBER; i++)
+	{
+		//1.1、获取内部flash存储区的信息
+		pstorage_block_identifier_get(&block_id_flash_store, \
+						(pstorage_size_t)(FIG_INFO_OFFSET+i), &block_id_fig_info);
+		memset(&fig_info_get, 0, sizeof(struct fig_info));
+		pstorage_load((uint8_t *)&fig_info_get, &block_id_fig_info, sizeof(struct fig_info), 0);
+		
+		if(strncmp(fig_info_get.fig_info_data, (char *)&p_data[1], 4) == 0)
+		{
+			//1.1.1、未存储，获取要存储的id号
+			marry_fig_id = i;
+			//跳转执行存储
+			goto exe_delete_fig;
+		}
+	}
+	//1.1.2、遍历完后，没有空的fig，返回错误
+	//将命令加上0x40,返回给app
+	nus_data_send[0] = p_data[0] + 0x40;
+	nus_data_send[1] = 0xff;
+	nus_data_send_length = 2;
+	ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+	return 0;
+	
+exe_delete_fig:
+	//设置删除的指纹ID，大端字节
+	memset(delete_fig_id, 0, 2);
+	delete_fig_id[0] = marry_fig_id / 0x100;
+	delete_fig_id[1] = marry_fig_id & 0xff;
+	
+	//2、打开指纹模块电源
+	nrf_gpio_pin_set(BATTERY_LEVEL_EN);
+	//上电需要0.5s的准备时间
+	nrf_delay_ms(1000);
+	//3、发送删除指纹号命令
+	memset(r301t_send_deletechar_idx_cmd, 0, 5);
+	memcpy(r301t_send_deletechar_idx_cmd, r301t_send_deletechar_id0_cmd, 5);
+	//指定flash指纹ID
+	r301t_send_deletechar_idx_cmd[1] = delete_fig_id[0];
+	r301t_send_deletechar_idx_cmd[2] = delete_fig_id[1];
+	//发送命令
+	fig_r301t_send_cmd(0x01, sizeof(r301t_send_deletechar_idx_cmd), \
+											r301t_send_deletechar_idx_cmd);
+	//设置命令码为删除char
+	fig_cmd_code = GR_FIG_CMD_DELCHAR;
+	//4、取指令码
+	ble_operate_code = p_data[0];
+}
+
 
 /************************************************************
 *对nus servvice传来的数据进行分析
@@ -928,29 +1017,30 @@ void operate_code_check(uint8_t *p_data, uint16_t length)
 				}
 			}
 		break;
-		
-		case 0xEF://指纹模块r301t指令
-			if(length >11) //传送命令包最少12位
+			
+		case ENROLL_FIG://注册指纹
+			if(length == 5)
 			{
 				if(is_superkey_checked == true)//如果验证了超级密码
 				{
-					send_fig_r301t_cmd(p_data, length);
+					enroll_fig(p_data, length);
 				}
 				else
 				{
 					//向手机发送失败信息"skey check fail"
 					ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
 									strlen(checked_superkey_false) );
+			
 				}
 			}
 		break;
 			
-		case SET_FP_USE_TIME://设置指纹的有效时间
+		case DELETE_FIG://删除指纹
 			if(length == 5)
 			{
 				if(is_superkey_checked == true)//如果验证了超级密码
 				{
-					fp_store_set(p_data, length);
+					delete_fig(p_data, length);
 				}
 				else
 				{

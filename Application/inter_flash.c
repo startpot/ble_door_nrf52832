@@ -20,12 +20,16 @@ pstorage_handle_t		block_id_seed;
 pstorage_handle_t		block_id_device_name;
 pstorage_handle_t		block_id_key_store;
 pstorage_handle_t		block_id_record;
+pstorage_handle_t		block_id_fig_info;
 
 struct key_store_length_struct		key_store_length;
 struct record_length_struct			record_length;
 
 struct key_store_struct				key_store_struct_set;
 struct door_open_record				door_open_record_get;
+
+struct fig_info	fig_info_set; //设置的指纹信息
+struct fig_info	fig_info_get; //获取的指纹信息
 
 
 bool	key_store_length_setted;
@@ -405,23 +409,23 @@ void record_write(struct door_open_record *open_record)
 }
 
 /************************************************
-*将指纹密码和有效时间，设置时间存储在内部flash
+*将指纹信息存储到内部flash
 ************************************************/
-int fp_write(struct fp_store_struct *fp_store_struct_p)
+int fig_info_write(struct fig_info *fp_info_set_p)
 {
 	int err_code;
-	err_code = interflash_write((uint8_t *) fp_store_struct_p, sizeof(struct fp_store_struct), \
-					(pstorage_size_t)(FP_STORE_OFFSET + fp_store_struct_p->fp_id));
+	err_code = interflash_write((uint8_t *) fp_info_set_p, sizeof(struct fig_info), \
+					(pstorage_size_t)(FIG_INFO_OFFSET + fp_info_set_p->fig_info_id));
 	return err_code;
 }
 
 /*************************************************
 *读取内部flash中指定位置的
 *************************************************/
-int fp_read(struct fp_store_struct *fp_store_struct_p, uint16_t fp_id_read)
+int fig_info_read(struct fig_info *fp_info_get_p)
 {
 	int err_code;
-	err_code = interflash_read((uint8_t *)fp_store_struct_p, sizeof(struct fp_store_struct), \
-					(pstorage_size_t)(FP_STORE_OFFSET + fp_id_read));
+	err_code = interflash_write((uint8_t *) fp_info_get_p, sizeof(struct fig_info), \
+					(pstorage_size_t)(FIG_INFO_OFFSET + fp_info_get_p->fig_info_id));
 	return err_code;
 }

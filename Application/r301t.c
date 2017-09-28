@@ -23,26 +23,28 @@ bool		is_r301t_autoenroll = false;
 uint8_t 	r301t_autosearch_step = 0;
 
 
-struct tm		fingprint_checked_tm;
-time_t 			fingprint_checked_time_t;//指纹验证通过的时间
-struct fp_store_struct fp_store_struct_get;//从内部flash中获取的指纹信息
+//发送获取指纹图像命令
+uint8_t		r301t_send_getimg_cmd[1] = {0x01};
+//将生成的图像生成到charbuff1
+uint8_t		r301t_send_genchar1_cmd[2]  = {0x02, 0x01};
+//将生成的图像生成到charbuff2
+uint8_t		r301t_send_genchar2_cmd[2] = {0x02, 0x02};
+//发送搜索指纹模式，一共有32个指纹
+uint8_t		r301t_send_search_cmd[6] = {0x04, 0x01, 0x00, 0x00, 0x00, 0x20};
+//将charbuff1与charbuffer2中的特征文件合并生成模板存于charbuff1与charbuff2
+uint8_t		r301t_send_regmodel_cmd[1] = {0x05};
+//将特征缓冲区的文件储存在flash指纹库这里是ID0
+uint8_t		r301t_send_storechar_id0_cmd[4] = {0x06, 0x02, 0x00, 0x00};
+//删除指纹命令,这里是ID0
+uint8_t		r301t_send_deletechar_id0_cmd[5] = {0x0c, 0x00, 0x00, 0x00, 0x01};
+//清空指纹库命令
+uint8_t		r301t_send_empty_cmd[1] = {0x0d};
 
-void fig_r301t_send_getimage(void)
-{
-	static uint8_t send_getimage_data[12] = {0xEF,0x01, 0xFF, 0xFF, 0xFF, 0xFF,\
-											 0x01, 0x00, 0x03, 0x01, 0x00, 0x05};
-	//将命令通过uart发送给指纹模块
-	for (uint32_t m = 0; m < 12; m++)
-	{
-		while(app_uart_put(send_getimage_data[m]) != NRF_SUCCESS);
-	}
-	
-}
 
 /**********************************************************
 *	向指纹模块发送指令
 *	data_id		包标识	bit6
-*	data_len		包长度	bit7-8
+*	data_len		包长度-2	bit7-8
 *	data_code	包内容	bit9-...(共data_len-2个)
 ************************************************************/
 void fig_r301t_send_cmd(uint8_t	data_id, uint16_t data_len, uint8_t	*data_code)
@@ -61,73 +63,38 @@ void fig_r301t_send_cmd(uint8_t	data_id, uint16_t data_len, uint8_t	*data_code)
 	//包标识
 	send_data[GR_FIG_DATA_ID_SITE] = data_id;
 	//包长度
-	send_data[GR_FIG_DATA_LEN_SITE] = (data_len / 0x100);
-	send_data[GR_FIG_DATA_LEN_SITE+1] = (data_len &0xFF);
+	send_data[GR_FIG_DATA_LEN_SITE] = ((data_len +2) / 0x100);
+	send_data[GR_FIG_DATA_LEN_SITE+1] = ((data_len + 2 )&0xFF);
 	//包内容
 	if(data_code !=NULL)
 	{
-	memcpy(&send_data[9], data_code, data_len -2);
+	memcpy(&send_data[9], data_code, data_len );
 	}
 
 	//校验和,从6位开始计算
-	for(int j=6; j<(7 +1+ data_len -1); j++)
+	for(int j=6; j<(7 +1+ data_len + 2 -1); j++)
 	{
 		sum = sum+send_data[j];
 	}
-	send_data[GR_FIG_DATA_LEN_SITE +1+data_len - 1] = (sum/0x100);
-	send_data[GR_FIG_DATA_LEN_SITE+1+ data_len] = (sum &0xFF);
-
+	send_data[GR_FIG_DATA_LEN_SITE +1+data_len + 2 - 1] = (sum/0x100);
+	send_data[GR_FIG_DATA_LEN_SITE+1+ data_len + 2] = (sum &0xFF);
 	//将命令通过uart发送给指纹模块
-	for (uint32_t m = 0; m < (9 + data_len); m++)
+	for (uint32_t m = 0; m < (9 + data_len + 2 ); m++)
 	{
 		while(app_uart_put(send_data[m]) != NRF_SUCCESS);
     //    printf("%02X ",send_data[m]);
 	}
 
 }
-
-/*********************************************
-*指纹模块的应答处理
-*********************************************/
-int fig_r301t_reply_check(void)
+/******************************
+*将指纹模块的信息返回给上位机
+******************************/
+static void send_fig_r301t_reply_data(void)
 {
-	static uint8_t 		fp_keys_tmp[6];
-	static uint16_t 	reply_data_len;
 	static uint32_t		send_time;
 	static uint32_t		send_left;
-	static uint8_t		send_genchar_data[13] = {0xEF,0x01,0xFF,0xFF,0xFF,0xFF,\
-												 0x01,0x00,0x04,0x02,0x01, \
-												 0x00,0x08};
-	
-	static uint8_t		send_search_data[17] = {0xEF,0x01,0xFF,0xFF,0xFF,0xFF,\
-												0x01,0x00,0x08,0x04,\
-												0x01,0x00,0x00,0x0b,0xb8,\
-												0x00,0xd1};
-	
-	static uint8_t		send_genchar2_data[13] = {0xEF,0x01,0xFF,0xFF,0xFF,0xFF,\
-												 0x01,0x00,0x04,0x02,0x02, \
-												 0x00,0x09};
-	
-	static uint8_t		send_regmodel_data[12] = {0xEF,0x01,0xFF,0xFF,0xFF,0xFF,\
-												 0x01,0x00,0x03,0x05, \
-												 0x00,0x09};
-	
-	static uint8_t		send_storechar_data[15] = {0xEF,0x01,0xFF,0xFF,0xFF,0xFF,\
-												 0x01,0x00,0x06,0x06,0x02,0x00,0x00, \
-												 0x00,0x0f};
-	
-	static uint16_t		sum_data;
-	static uint16_t		store_id;
-																				
-	//获取包长度
-	reply_data_len = fig_recieve_data[GR_FIG_DATA_LEN_SITE]*0x100 + \
-					 fig_recieve_data[GR_FIG_DATA_LEN_SITE +1];
-		
-	//当数据包的总长度等于包长度+9的时候收完总的数据包
-	if(fig_recieve_data_length ==(9+reply_data_len))
-	{
-		//无论如何都会将结果返还给上位机的
-		//将模块的返回包全部通过蓝牙串口返回给上位机
+	//无论如何都会将结果返还给上位机的
+	//将模块的返回包全部通过蓝牙串口返回给上位机
 		if(fig_recieve_data_length <=BLE_NUS_MAX_DATA_LEN)
 		{
 			//数据长度小于20，一次发完
@@ -156,150 +123,253 @@ int fig_r301t_reply_check(void)
 				ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 			}		
 		}
+
+}
+
+
+
+/*********************************************
+*指纹模块的应答处理
+*********************************************/
+int fig_r301t_reply_check(void)
+{
+	uint8_t	r301t_send_storechar_idx_cmd[4];
 		
-		//判断发送包指令码
-		if(fp_cmd_code == GR_FIG_CMD_STORECHAR || \
-			fp_cmd_code == GR_FIG_CMD_DELCHAR || \
-			fp_cmd_code == GR_FIG_CMD_EMPTY)
-		{
-		//关闭指纹芯片电源电源
-		nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
-		}
-		
-		
-		//分析数据包,如果不是自动注册模式,且是手指按下进入了搜索模式
-		if(is_r301t_autoenroll ==false)
-		{
-			if(	r301t_autosearch_step >0)
+	//send_fig_r301t_reply_data();
+	//判断发送包的指令码
+	switch(fig_cmd_code)
+	{
+		case GR_FIG_CMD_STORECHAR:
+			//关闭指纹芯片电源电源
+			nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
+			
+			//将命令加上0x40,返回给app
+			nus_data_send[0] = ble_operate_code + 0x40;
+			//判断结果码
+			if(fig_recieve_data[9] ==0x00)
 			{
-				//手指按下设置的自动搜索模式，
-				//应答包失败
-				if(fig_recieve_data[9] !=0x00)
+				nus_data_send[1] = 0x00;
+				//成功将设置指纹信息函数存储在内部flash
+				fig_info_write(&fig_info_set);
+			}
+			else
+			{
+				nus_data_send[1] = 0x01;
+			}
+			nus_data_send_length = 2;
+			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+		break;
+				
+		case GR_FIG_CMD_DELCHAR:
+			//关闭指纹芯片电源电源
+			nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
+			
+			//将命令加上0x40,返回给app
+			nus_data_send[0] = ble_operate_code + 0x40;
+			//判断结果码
+			if(fig_recieve_data[9] ==0x00)
+			{
+				nus_data_send[1] = 0x00;
+				//删除记录的指纹信息
+					//1.1、获取内部flash存储区的信息
+					pstorage_block_identifier_get(&block_id_flash_store, \
+								(pstorage_size_t)(FIG_INFO_OFFSET+(delete_fig_id[0]*0x100 + delete_fig_id[1])), &block_id_fig_info);
+					pstorage_clear(&block_id_fig_info, sizeof(struct fig_info));
+			}
+			else
+			{
+				nus_data_send[1] = 0x01;
+			}
+			nus_data_send_length = 2;
+			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+		break;
+				
+		case GR_FIG_CMD_EMPTY:
+			//关闭指纹芯片电源电源
+			nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
+			//清除所有指纹库信息
+			for(int i = 0; i <FIG_INFO_NUMBER; i++)
+			{
+				pstorage_block_identifier_get(&block_id_flash_store, \
+								(pstorage_size_t)(FIG_INFO_OFFSET+ i), &block_id_fig_info);
+				pstorage_clear(&block_id_fig_info, sizeof(struct fig_info));
+			}
+		break;
+
+		default:
+				
+		break;		
+	}
+		
+	//分析数据包,如果不是自动注册模式,且是手指按下进入了搜索模式
+	if(is_r301t_autoenroll ==false)
+	{
+		if(	r301t_autosearch_step >0)
+		{
+			//手指按下设置的自动搜索模式，
+			//应答包失败
+			if(fig_recieve_data[9] !=0x00)
+			{
+				//应答失败，鸣笛4次
+				beep_didi(4);
+				//失败情况，如果是第一步则重复发GR_GetImage
+				if(r301t_autosearch_step == 1)
 				{
-					//应答失败，鸣笛4次
-					beep_didi(4);
-					//失败情况，如果是第一步则重复发GR_GetImage
-					if(r301t_autosearch_step == 1)
-					{
-						//第一步执行失败，继续发送getimage命令
-						fig_r301t_send_getimage();
-					}
-					else
-					{//如果不是第一步，则直接退出
-						r301t_autosearch_step = 0;
-					}
-					fig_recieve_data_length =0;
+					//第一步执行失败，继续发送getimage命令
+					fig_r301t_send_cmd(0x01, sizeof(r301t_send_getimg_cmd), \
+												r301t_send_getimg_cmd);
 				}
 				else
 				{
-					if(	r301t_autosearch_step == 1 &&fig_recieve_data_length != 0)
-					{
-						//第一步的应答包的话，发送第2个指令，设置步骤为2
-						for (uint32_t m = 0; m < 13; m++)
-						{
-							while(app_uart_put(send_genchar_data[m]) != NRF_SUCCESS);
-						}
+					//返回第几步
+					//将命令加上0x40,返回给app
+					nus_data_send[0] = ble_operate_code;
+					//第几步
+					nus_data_send[1] = r301t_autosearch_step;
+					nus_data_send_length = 2;
+					ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+					//如果不是第一步，则直接退出
+					r301t_autosearch_step = 0;
+				}
+				fig_recieve_data_length =0;
+			}
+			else
+			{
+				//判断自动搜索的步骤
+				switch(r301t_autosearch_step)
+				{
+					case 1://第一步的应答包的话，发送第2个指令，设置步骤为2,发送genchar生成特征值命令
 						r301t_autosearch_step =2;
 						fig_recieve_data_length = 0;
-					}
-					if( r301t_autosearch_step == 2 &&fig_recieve_data_length != 0)
-					{
-						//第二步的应答包的话，发送第3个指令，设置步骤为3
-						for (uint32_t m = 0; m < 17; m++)
-						{
-							while(app_uart_put(send_search_data[m]) != NRF_SUCCESS);
-						}
+						fig_cmd_code = GR_FIG_CMD_GENCHAR;
+						fig_r301t_send_cmd(0x01, sizeof(r301t_send_genchar1_cmd), \
+											r301t_send_genchar1_cmd);
+					break;
+						
+					case 2://第二步的应答包的话，发送第3个指令，设置步骤为3,发送搜索指纹命令
 						r301t_autosearch_step =3;
 						fig_recieve_data_length = 0;
-					}
-					if( r301t_autosearch_step ==3 &&fig_recieve_data_length != 0)
-					{
-						//最后一步，判断结果
+						fig_cmd_code = GR_FIG_CMD_SEARCH;
+						fig_r301t_send_cmd(0x01, sizeof(r301t_send_search_cmd), \
+											r301t_send_search_cmd);
+					break;
+						
+					case 3://第三步，判断结果码
+							//最后一步，判断结果
 						if(fig_recieve_data[9] == 0)
-						{	//返回搜索到了指纹
-							
-							//记录指纹开锁
-							//1.组织开锁记录(6B)(fp，2B的指纹ID，2B的matchscore)+时间
-							//1.1获取指纹验证通过的时间
-							rtc_time_read(&fingprint_checked_tm);
-							fingprint_checked_time_t = my_mktime(&fingprint_checked_tm);
-							
-							//1.2 读取存储的指纹信息
-							fp_read(&fp_store_struct_get, (fig_recieve_data[12]*(0x100) + fig_recieve_data[13]));
-							
-							//1.3如果设置了有效时间
-							if(fp_store_struct_get.fp_wr_flag == 'w')
-							{
-								goto fp_check_use_time;
-							}
-							else
-							{
-								goto fp_uncheck_use_time;
-							}
-														
-		fp_check_use_time:							
-							if((double)my_difftime(fingprint_checked_time_t, fp_store_struct_get.fp_store_time) >= \
-														(fp_store_struct_get.fp_use_time* 60))
-							{
-							
-		fp_uncheck_use_time:
-								//开锁
-								ble_door_open();
-								//1.2.1组织指纹的密码结构
-								memset(&open_record_now, 0, sizeof(struct door_open_record));
-								fp_keys_tmp[0] = 'f';
-								fp_keys_tmp[1] = 'p';
-								memcpy(&fp_keys_tmp[2], &fig_recieve_data[10], 2);
-								memcpy(&fp_keys_tmp[4], &fig_recieve_data[12], 2);
-							
-								memcpy(&open_record_now.key_store, fp_keys_tmp, 6);
-								memcpy(&open_record_now.door_open_time, &key_input_time_t, 4);
-								//1.2.2记录指纹开锁
-								record_write(&open_record_now);
-								
-								//关闭指纹芯片电源电源
-								nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
-								
-							}
+						{//返回搜索到了指纹
+							//打开门
+							ble_door_open();
+							//TODO记录指纹开锁
 						}
 						//设置步骤为0，状态为false
 						r301t_autosearch_step = 0;
 						fig_recieve_data_length = 0;
-					}
+						//关闭指纹芯片电源电源
+						nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
+					break;
+					
+					default:
+							
+					break;
 				}
 			}
 		}
-		/*
-		else//自动注册模式
+	}
+	else//自动注册模式
+	{
+		if(r301t_autoenroll_step > 0)
 		{
-			if(r301t_autoenroll_step > 0)
+			//上位机设置自动注册模式
+			if(fig_recieve_data[9] != 0x00)
 			{
-				//上位机设置自动注册模式
-				if(fig_recieve_data[9] !== 0x00)
+				if(r301t_autoenroll_step == 1)
 				{
-					//应答包，失败
-					goto autoenroll_fail;
+					//第二步继续发送getimg
+					fig_r301t_send_cmd(0x01, sizeof(r301t_send_getimg_cmd), \
+											r301t_send_getimg_cmd);
 				}
 				else
 				{
-					//第1步的话，设置步骤为2，发送第2个指令
-					if( r301t_autoenroll_step == 1 )
-					{
+					//返回第几步
+					//将命令加上0x40,返回给app
+					nus_data_send[0] = ble_operate_code;
+					//第几步
+					nus_data_send[1] = r301t_autoenroll_step;
+					nus_data_send_length = 2;
+					ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+
+					//应答包，失败
+					//设置步骤为0，接收数据长度清零
+					r301t_autoenroll_step = 0x00;
+					fig_recieve_data_length = 0;
+					is_r301t_autoenroll = false;
+					//关闭指纹模块电源
+					nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
+					return 0;
+				}
+			}
+			else
+			{
+				switch(r301t_autoenroll_step)
+				{						
+					case 1://第1步，发送Genchar1命令，设置步骤为2
+						r301t_autoenroll_step = 2;
+						fig_recieve_data_length = 0;
+						fig_cmd_code = GR_FIG_CMD_GENCHAR;
+						fig_r301t_send_cmd(0x01, sizeof(r301t_send_genchar1_cmd), \
+											r301t_send_genchar1_cmd);
+					break;
+							
+					case 2://第2步，发送getimg命令，设置步骤为3
+						r301t_autoenroll_step = 3;
+						fig_recieve_data_length = 0;
+						fig_cmd_code = GR_FIG_CMD_GETIMG;
+						fig_r301t_send_cmd(0x01, sizeof(r301t_send_getimg_cmd), \
+											r301t_send_getimg_cmd);
+					break;
+							
+					case 3://第3步，发送genchar2命令，设置步骤为4
+						r301t_autoenroll_step = 4;
+						fig_recieve_data_length = 0;
+						fig_cmd_code = GR_FIG_CMD_GENCHAR;
+						fig_r301t_send_cmd(0x01, sizeof(r301t_send_genchar2_cmd), \
+											r301t_send_genchar2_cmd);
+					break;
+							
+					case 4://第4步，发送regmodel命令，设置步骤为5
+						r301t_autoenroll_step = 5;
+						fig_recieve_data_length = 0;
+						fig_cmd_code = GR_FIG_CMD_REGMODEL;
+						fig_r301t_send_cmd(0x01, sizeof(r301t_send_regmodel_cmd), \
+											r301t_send_regmodel_cmd);
+					break;
+							
+					case 5://第5步，发送储storechar命令，完成，设置步骤为0,设置标志位为false
+						r301t_autoenroll_step = 0;
+						fig_recieve_data_length = 0;
+						is_r301t_autoenroll = false;
+						//设置命令码为storechar
+						fig_cmd_code = GR_FIG_CMD_STORECHAR;
+						//组织发送存储命令
+						memset(r301t_send_storechar_idx_cmd, 0, 4);
+						memcpy(r301t_send_storechar_idx_cmd, \
+									r301t_send_storechar_id0_cmd, 4);
+						//设置ID号
+						r301t_send_storechar_idx_cmd[2] = enroll_fig_id[0];
+						r301t_send_storechar_idx_cmd[3] = enroll_fig_id[1];
 						
-					}
+						fig_r301t_send_cmd(0x01, sizeof(r301t_send_storechar_idx_cmd), \
+											r301t_send_storechar_idx_cmd);
+					default:
+							
+					break;
 				}
 			}
 		}
-		*/
+	}
 		
-		//收到数据长度清零
-		fig_recieve_data_length = 0;
-		return 0;
-autoenroll_fail:
-	//设置步骤为0，接收数据长度清零
-	r301t_autoenroll_step = 0x00;
+	//收到数据长度清零
 	fig_recieve_data_length = 0;
 	return 0;
-	}
-
 }

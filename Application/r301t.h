@@ -32,6 +32,9 @@
 *
 ************************************************************/
 
+#define	R301T_MAX_FIG_NUMBER			32
+
+
 //状态寄存器	GR:杭州城章
 #define	GR_SYS_PARAM_BUSY_BIT       	0   //1表示系统正在执行命令，0表示空闲
 #define	GR_SYS_PARAM_PASS_BIT       	1   //1表示指纹验证通过
@@ -122,9 +125,27 @@
 extern bool		is_r301t_autoenroll;
 extern uint8_t 	r301t_autosearch_step;
 
-extern struct fp_store_struct fp_store_struct_get;
 
-void fig_r301t_send_getimage(void);
+/**************************************
+*r301t指纹模块相关指令
+**************************************/
+//发送获取指纹图像命令
+extern uint8_t		r301t_send_getimg_cmd[1];
+//将生成的图像生成到charbuff1
+extern uint8_t		r301t_send_genchar1_cmd[2];
+//将生成的图像生成到charbuff2
+extern uint8_t		r301t_send_genchar2_cmd[2];
+//发送搜索指纹模式，一共有32个指纹
+extern uint8_t		r301t_send_search_cmd[6];
+//将charbuff1与charbuffer2中的特征文件合并生成模板存于charbuff1与charbuff2
+extern uint8_t		r301t_send_regmodel_cmd[1];
+//将特征缓冲区的文件储存在flash指纹库这里是ID0
+extern uint8_t		r301t_send_storechar_id0_cmd[4];
+//删除指纹命令
+extern uint8_t		r301t_send_deletechar_id0_cmd[5];
+//清空指纹库命令
+extern uint8_t		r301t_send_empty_cmd[1];
+
 void fig_r301t_send_cmd(uint8_t	data_id, uint16_t data_len, uint8_t	*data_code);
 int fig_r301t_reply_check(void);
 

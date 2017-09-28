@@ -415,8 +415,14 @@ static void uart_event_handle(app_uart_evt_t * p_event)
 			
 			//收到的数据包长度至少12位
 			if(fig_recieve_data_length >11)
-			{	//指纹模块r301t
+			{	
+				//接收长度完毕
+				if(fig_recieve_data_length == \
+					(9 + (fig_recieve_data[GR_FIG_DATA_LEN_SITE]*0x100) + fig_recieve_data[GR_FIG_DATA_LEN_SITE + 1]))
+				{
+				//指纹模块r301t
 				fig_r301t_reply_check();
+				}
 			}
 		break;
 
