@@ -163,7 +163,7 @@ int fig_r301t_reply_check(void) {
 			//1.1、获取内部flash存储区的信息
 			pstorage_block_identifier_get(&block_id_flash_store, \
 			                              (pstorage_size_t)(FIG_INFO_OFFSET+(delete_fig_id[0]*0x100 + delete_fig_id[1])), &block_id_fig_info);
-			pstorage_clear(&block_id_fig_info, sizeof(struct fig_info));
+			pstorage_clear(&block_id_fig_info, BLOCK_STORE_SIZE);
 		} else {
 			nus_data_send[1] = 0x01;
 		}

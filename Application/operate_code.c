@@ -746,12 +746,10 @@ static int get_fig_info(uint8_t *p_data, uint16_t length) {
 		if(fig_info_get.is_store == 'w') {
 			//写了指纹信息,将指令码+40，再把指纹信息返回给上位机
 			nus_data_send[0] = p_data[0] + 0x40;
-			nus_data_send[1] = fig_info_get.fig_info_id / 0x1000000;
-			nus_data_send[2] = fig_info_get.fig_info_id / 0x10000;
-			nus_data_send[3] = fig_info_get.fig_info_id / 0x100;
-			nus_data_send[4] = fig_info_get.fig_info_id &0xff;
-			memcpy(&nus_data_send[5], fig_info_get.fig_info_data, 4);
-			nus_data_send_length = 9;
+			nus_data_send[1] = fig_info_get.fig_info_id / 0x100;
+			nus_data_send[2] = fig_info_get.fig_info_id &0xff;
+			memcpy(&nus_data_send[3], fig_info_get.fig_info_data, 4);
+			nus_data_send_length = 7;
 			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 		}
 	}
