@@ -18,8 +18,7 @@
 /***********************************
 *32位大小端变换
 ************************************/
-INLINE uint32_t Reverse32(uint32_t x)
-{
+INLINE uint32_t Reverse32(uint32_t x) {
 	uint32_t tmp;
 	tmp = (x & 0x000000ff) << 24;
 	tmp |= (x & 0x0000ff00) << 8;
@@ -31,8 +30,7 @@ INLINE uint32_t Reverse32(uint32_t x)
 /*******************************************
 *64位大小端变换
 ********************************************/
-INLINE uint64_t Reverse64(uint64_t x)
-{
+INLINE uint64_t Reverse64(uint64_t x) {
 	uint32_t nTemp[3] = {0};
 	memcpy(nTemp + 1, &x, sizeof(uint64_t));
 	nTemp[0] = Reverse32(nTemp[2]);
@@ -40,20 +38,16 @@ INLINE uint64_t Reverse64(uint64_t x)
 	return *(uint64_t *)nTemp;
 }
 
-INLINE sm_word ML(uint8_t X, uint8_t j)
-{
+INLINE sm_word ML(uint8_t X, uint8_t j) {
 	return Reverse32((sm_word)(X << (j % 32)));
 }
 
-INLINE sm_word SUM(sm_word X, sm_word Y)
-{
+INLINE sm_word SUM(sm_word X, sm_word Y) {
 	return Reverse32(Reverse32(X) + Reverse32(Y));
 }
 
-int TruncateSM4(uint8_t pSrc[16], uint16_t nSrcLen, uint8_t pDst[4], uint16_t nDstSize)
-{
-	if(nSrcLen != 16 || nDstSize < 4)
-	{
+int TruncateSM4(uint8_t pSrc[16], uint16_t nSrcLen, uint8_t pDst[4], uint16_t nDstSize) {
+	if(nSrcLen != 16 || nDstSize < 4) {
 		return -1;
 	}
 
@@ -79,7 +73,7 @@ int TruncateSM4(uint8_t pSrc[16], uint16_t nSrcLen, uint8_t pDst[4], uint16_t nD
 // pDynPwd：输出的动态口令，可配置位数nDynPwdSize
 // nGenLen: 输出的10进制的位数
 // nDynPwdSize: 用于存储十进制动态密码的uint8_t个数
-// 
+//
 #define DPWD_KEY_LEN					16
 #define DPWD_UTC_TIME_LEN				8
 #define DPWD_TIME_INTERVAL_LEN			2
@@ -103,14 +97,13 @@ int TruncateSM4(uint8_t pSrc[16], uint16_t nSrcLen, uint8_t pDst[4], uint16_t nD
 // 若DPWD_KEY_LEN 和 （DPWD_UTC_TIME_LEN + DPWD_COUNTER_LEN + DPWD_CHALLENGE_LEN）不等于16，应补充0到16uint8_t
 // 如果种子和ID的长度大于16uint8_t，应按标准做多次处理。以下仅仅针对16uint8_t
 int SM4_DPasswd(uint8_t * pKey, uint64_t Time, uint16_t Interval, uint32_t Counter, \
-					uint8_t* pChallenge, uint8_t* pDynPwd)
-{
+                uint8_t* pChallenge, uint8_t* pDynPwd) {
 	// T = T0/Tc
 	if(Interval == 0)
 		return DPWD_ERROR_INTERVAL_ZERO;
 	if(Interval > 60)
 		return DPWD_ERROR_INTERVAL_TOO_LARGE;
-	
+
 	uint64_t tTime;
 	tTime = Time / Interval;
 
@@ -120,13 +113,12 @@ int SM4_DPasswd(uint8_t * pKey, uint64_t Time, uint16_t Interval, uint32_t Count
 
 	int i, offset;
 	uint32_t pwd = 0;
-	
+
 	// copy key
-	for(i = 0; i < DPWD_KEY_LEN; i ++)
-	{
+	for(i = 0; i < DPWD_KEY_LEN; i ++) {
 		sm_k[i] = pKey[i];
 	}
-	
+
 	// assemble ID
 	// ID = T|C|Q
 	// ID 由T C Q构成；T C最少必须有一个存在；Q为可选项；若ID不足128bits，则自动补充‘0’填充满
@@ -134,20 +126,17 @@ int SM4_DPasswd(uint8_t * pKey, uint64_t Time, uint16_t Interval, uint32_t Count
 	uint8_t* tBuf;
 	tTime = Reverse64(tTime);
 	tBuf = (uint8_t *)&tTime;
-	for(i = 0, offset = 0; i < DPWD_UTC_TIME_LEN; i ++)
-	{
+	for(i = 0, offset = 0; i < DPWD_UTC_TIME_LEN; i ++) {
 		sm_i[offset ++] = tBuf[i];
 	}
-	
+
 	uint32_t tCounter;
 	tCounter = Reverse32(Counter);
 	tBuf = (uint8_t *)&tCounter;
-	for(i = 0; i < DPWD_COUNTER_LEN; i ++)
-	{
+	for(i = 0; i < DPWD_COUNTER_LEN; i ++) {
 		sm_i[offset ++] = tBuf[i];
 	}
-	for(i = 0; i < DPWD_CHALLENGE_LEN; i ++)
-	{
+	for(i = 0; i < DPWD_CHALLENGE_LEN; i ++) {
 		sm_i[offset ++] = pChallenge[i];
 	}
 
@@ -162,7 +151,7 @@ int SM4_DPasswd(uint8_t * pKey, uint64_t Time, uint16_t Interval, uint32_t Count
 	pwd = pwd % (int)pow(10, DPWD_GEN_DPWD_DEC_LEN);
 
 	for(i = DPWD_GEN_DPWD_DEC_LEN - 1; i >= 0; i --)
-	
+
 	{
 		uint32_t tmp;
 		tmp = pow(10, i);
@@ -171,7 +160,7 @@ int SM4_DPasswd(uint8_t * pKey, uint64_t Time, uint16_t Interval, uint32_t Count
 		//pDynPwd [i] = offset + 0x30;//小端情况
 		pDynPwd [DPWD_GEN_DPWD_DEC_LEN-1-i] = offset + 0x30;//大端情况
 	}
-	
+
 	return DPWD_ERROR_OK;
 
 }

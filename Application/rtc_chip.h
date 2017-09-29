@@ -6,7 +6,7 @@
 #include "sdk_errors.h"
 
 /*************************RTC-CHIP的地址****************************/
-#define RTC_CHIP_DEVICE_ADDR			0xA2	
+#define RTC_CHIP_DEVICE_ADDR			0xA2
 #define RTC_CHIP_REAL_ADDR 				(RTC_CHIP_DEVICE_ADDR>>1)
 
 /*************************IIC-pins*********************************/

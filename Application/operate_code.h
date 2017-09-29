@@ -65,9 +65,11 @@ extern uint8_t				delete_fig_id[2];
 
 #define ENROLL_FIG				0x70	//注册指纹
 #define DELETE_FIG				0x71	//删除指纹
-#define SEARCH_FIG				0X72	//搜素指纹
+#define SEARCH_FIG				0x72	//搜素指纹
+#define GET_FIG_INFO			0x73	//获取指纹信息
+#define STOP_FIG				0x74	//停止指纹模块
 
-
+void ble_reply(uint8_t operate_code, uint8_t *reply_code, uint16_t reply_code_length);
 void operate_code_check(uint8_t *p_data, uint16_t length);
 
 #endif  //OPERATE_CODE_H__

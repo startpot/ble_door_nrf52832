@@ -119,7 +119,6 @@
 #define	GR_FIG_CMD_GENBINIMG			0x1C	//生成二值化指纹图像
 #define	GR_FIG_CMD_VTNUM				0x1D	//读有效模板个数
 #define	GR_FIG_CMD_RDINDEXTB			0x1F	//读索引表
-#define	GR_FIG_CMD_AUTOENROLL			0xFF	//设置自动注册，add by ln
 
 
 extern bool		is_r301t_autoenroll;

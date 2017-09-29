@@ -7,16 +7,14 @@
 #include "pstorage.h"
 
 //存储钥匙长度
-struct key_store_length_struct
-{
+struct key_store_length_struct {
 	uint32_t key_store_length;
 	uint32_t key_store_full;
 };
 
 
 //存储的键盘钥匙
-struct key_store_struct
-{
+struct key_store_struct {
 	uint8_t 	key_store[6];
 	uint16_t 	key_use_time;//有效时间，以1分钟为单位
 	uint8_t		control_bits;
@@ -30,15 +28,13 @@ struct key_store_struct
 extern char						super_key[SUPER_KEY_LENGTH];
 
 //开门记录的长度
-struct record_length_struct
-{
+struct record_length_struct {
 	uint32_t record_length;
 	uint32_t record_full;
 };
 
 //开门记录
-struct door_open_record
-{
+struct door_open_record {
 	uint8_t		key_store[6];
 	time_t		door_open_time;//门打开的时间s,(从1970.1.1到现在的时间的s)
 };
@@ -48,8 +44,7 @@ extern struct door_open_record		door_open_record_get;
 
 
 //指纹存储信息
-struct fig_info
-{
+struct fig_info {
 	uint32_t	is_store;	//是否存储
 	uint32_t	fig_info_id;//指纹信息的ID
 	char		fig_info_data[4];//指纹的描述信息
@@ -66,7 +61,7 @@ extern struct fig_info	fig_info_get;
 ----------------------------------------------------------------------------------
 -block_id_flash_store	BLOCK_STORE_SIZE * BLOCK_STORE_COUNT--
 ----------------------------------------------------------------------------------
-block_offset				-|-		size				
+block_offset				-|-		size
 ----------------------------------------------------------------------------------
 DEFAULT_PARAMS_OFFSET (0)	-|-		DEFAULT_PARAMS_NUMBER (1)
 MAC_OFFSET (1)				-|-		MAC_NUMBER (1)
@@ -160,10 +155,10 @@ extern uint8_t					flash_read_temp[BLOCK_STORE_SIZE];
 void flash_init(void);
 
 int interflash_write(uint8_t *p_data, uint32_t data_len, \
-					 pstorage_size_t block_id_offset);
+                     pstorage_size_t block_id_offset);
 
 int interflash_read(uint8_t *p_data, uint32_t data_len, \
-					 pstorage_size_t block_id_offset);
+                    pstorage_size_t block_id_offset);
 
 int write_super_key(uint8_t *p_data, uint32_t data_len);
 void key_store_write(struct key_store_struct *key_store_input);

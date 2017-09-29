@@ -37,14 +37,13 @@ ble_gap_addr_t addr;
 * 初始化参数
 * in：		none
 ******************************************/
-void set_default_params(void)
-{
+void set_default_params(void) {
 	uint32_t err_code;
 
 	//设置动态密码的长度为6位ASCII
 	KEY_CHECK_NUMBER = 5;
 	LED_LIGHT_TIME = 5;
-	
+
 	//读出设置的参数(判读是否是后期设置的,如果不是，设定参数)
 	//初始化参数
 	//([0x77(w，如果为w则已经设置参数，如果不是则初始化参数),
@@ -52,20 +51,17 @@ void set_default_params(void)
 	//			5(BEEP_DIDI_NUMBER 次数)，5(LED_LIGHT_TIME *0.1s),
 	//			5(KEY_CHECK_NUMBER) 次数]后面补0)
 	err_code = pstorage_block_identifier_get(&block_id_flash_store, \
-								(pstorage_size_t)DEFAULT_PARAMS_OFFSET, &block_id_params);
+	           (pstorage_size_t)DEFAULT_PARAMS_OFFSET, &block_id_params);
 	APP_ERROR_CHECK(err_code);
 	pstorage_load(flash_store_params, &block_id_params, 8, 0);
-	if(flash_store_params[0] == 'w')
-	{
+	if(flash_store_params[0] == 'w') {
 		OPEN_TIME = flash_store_params[1];//电机转动时间
 		DOOR_OPEN_HOLD_TIME = flash_store_params[2];//开门保持时间
 		BEEP_DIDI_NUMBER = flash_store_params[3];//蜂鸣器响次数
 		VOL_VALUE = flash_store_params[4];//电池电压报警
 		KEY_INPUT_USE_TIME = flash_store_params[5];//键盘密码输入密码有效时间，以10min为单位
 		MOTO_DIR = flash_store_params[6];//电机的方向
-	}
-	else
-	{
+	} else {
 		OPEN_TIME = 0x03;//电机转动时间
 		DOOR_OPEN_HOLD_TIME = 0x0a;//开门保持时间
 		BEEP_DIDI_NUMBER = 0x05;//蜂鸣器响次数
@@ -73,7 +69,7 @@ void set_default_params(void)
 		KEY_INPUT_USE_TIME = 0x05;//键盘密码输入密码有效时间，以10min为单位
 		MOTO_DIR = 0;
 	}
-	
+
 #if defined(BLE_DOOR_DEBUG)
 	printf("params set:\r\n");
 	printf("moto time:%d\r\n", OPEN_TIME);
@@ -82,5 +78,5 @@ void set_default_params(void)
 	printf("led ligth time:%d\r\n", LED_LIGHT_TIME);
 	printf("key check number:%d\r\n", KEY_CHECK_NUMBER);
 #endif
-	
+
 }

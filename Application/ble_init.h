@@ -21,13 +21,13 @@
 
 #define DEVICE_NAME							"tecsheild_door"//蓝牙设备名称，蓝牙广播给其他设备的名字
 #define DEVICE_NAME_SIZE					31 //名称最长20 -2字节，设备规定最长31
-//#define MANUFACTURER_NAME					"NordicSemiconductor"   //设备制造商，Will be passed to Device Information Service             
+//#define MANUFACTURER_NAME					"NordicSemiconductor"   //设备制造商，Will be passed to Device Information Service
 //#define MODEL_NUMBER						"nRF52"// 型号字符串. Will be passed to Device Information Service.
 //#define MANUFACTURER_ID					0x55AA55AA55 //设备制造商ID(可修改为自己的). Will be passed to Device Information Service.
 //#define ORG_UNIQUE_ID						0xEEBBEE //BLE组织联盟中唯一的ID. Will be passed to Device Information Service
 
 // UUID type for the Nordic UART Service (vendor specific)，主要是可以用官方的APP测试
-#define NUS_SERVICE_UUID_TYPE				BLE_UUID_TYPE_VENDOR_BEGIN                  
+#define NUS_SERVICE_UUID_TYPE				BLE_UUID_TYPE_VENDOR_BEGIN
 
 #define APP_ADV_INTERVAL					64 //广播间隔(0.625 ms * 400 = 250 ms)，广播间隔越大，越省电
 #define APP_ADV_TIMEOUT_IN_SECONDS			180 //广播超时，单位s
@@ -39,7 +39,7 @@
 #define AD_REPEAT_DELAY						APP_TIMER_TICKS(40000,APP_TIMER_PRESCALER)	//重复广播时间间隔：40000MS
 
 
-#define MIN_CONN_INTERVAL					MSEC_TO_UNITS(20, UNIT_1_25_MS)  
+#define MIN_CONN_INTERVAL					MSEC_TO_UNITS(20, UNIT_1_25_MS)
 #define MAX_CONN_INTERVAL					MSEC_TO_UNITS(75, UNIT_1_25_MS)
 #define SLAVE_LATENCY						0
 #define CONN_SUP_TIMEOUT					MSEC_TO_UNITS(4000, UNIT_10_MS)
@@ -61,7 +61,7 @@ APP_TIMER_DEF(m_sec_req_timer_id);
 //重复广播的定时器
 APP_TIMER_DEF(m_ad_repeat_timer_id);
 
-#define DEAD_BEEF																								0xDEADBEEF 
+#define DEAD_BEEF																								0xDEADBEEF
 
 //#define APP_FEATURE_NOT_SUPPORTED      	BLE_GATT_STATUS_ATTERR_APP_BEGIN + 2
 

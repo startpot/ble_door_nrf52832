@@ -9,10 +9,10 @@
 
 #include "inter_flash.h"
 
-enum keys_type{
-super_keys= 0x00,
-normal_keys,
-unkown_keys
+enum keys_type {
+	super_keys= 0x00,
+	normal_keys,
+	unkown_keys
 };
 
 extern bool			is_key_value_get;//是否是正在获取键盘按键

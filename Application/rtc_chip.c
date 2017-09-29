@@ -1,7 +1,7 @@
 /****************************************************************************
 *	RTC芯片 IIC接口
 *----------------------------------------------------------------------------
-*	tm														RTC							
+*	tm														RTC
 *	tm_sec(int:0-60)							02H(BCD:0-59:[6:0])
 *	tm_min(int:0-59)							03H(BCD:0-59:[6:0])
 *	tm_hour(int:0-23)							04H(BCD:0-23:[5:0])
@@ -35,27 +35,23 @@ nrf_drv_twi_t m_twi_master_rtc = NRF_DRV_TWI_INSTANCE(1); //指定TWI1
 *初始化RTC芯片
 *in：	none
 ************************/
-static ret_code_t rtc_iic_init(void)
-{
+static ret_code_t rtc_iic_init(void) {
 	ret_code_t ret;
-	const nrf_drv_twi_config_t config =
-    {
-       .scl                = RTC_CHIP_IIC_SCL_PIN,
-       .sda                = RTC_CHIP_IIC_SDA_PIN,
-       .frequency          = NRF_TWI_FREQ_100K,
-       .interrupt_priority = APP_IRQ_PRIORITY_LOW
-    };
+	const nrf_drv_twi_config_t config = {
+		.scl                = RTC_CHIP_IIC_SCL_PIN,
+		.sda                = RTC_CHIP_IIC_SDA_PIN,
+		.frequency          = NRF_TWI_FREQ_100K,
+		.interrupt_priority = APP_IRQ_PRIORITY_LOW
+	};
 
-    do
-    {
-        ret = nrf_drv_twi_init(&m_twi_master_rtc, &config, NULL, NULL);
-        if(NRF_SUCCESS != ret)
-        {
-            break;
-        }
-        nrf_drv_twi_enable(&m_twi_master_rtc);
-    }while(0);
-    return ret;
+	do {
+		ret = nrf_drv_twi_init(&m_twi_master_rtc, &config, NULL, NULL);
+		if(NRF_SUCCESS != ret) {
+			break;
+		}
+		nrf_drv_twi_enable(&m_twi_master_rtc);
+	} while(0);
+	return ret;
 
 }
 
@@ -65,13 +61,12 @@ static ret_code_t rtc_iic_init(void)
 		data			写入RTC芯片的数据
 *out：	ret				0成功
 **********************************************************/
-static ret_code_t rtc_i2c_device_write_byte(uint8_t address, uint8_t data)
-{
+static ret_code_t rtc_i2c_device_write_byte(uint8_t address, uint8_t data) {
 	ret_code_t ret;
-	uint8_t buffer[2] ={address,data};
+	uint8_t buffer[2] = {address,data};
 	ret = nrf_drv_twi_tx(&m_twi_master_rtc, RTC_CHIP_REAL_ADDR, buffer, 2, false);
 	return ret;
-	
+
 }
 
 /****************************************************************
@@ -81,43 +76,39 @@ static ret_code_t rtc_i2c_device_write_byte(uint8_t address, uint8_t data)
 			length			读出数据的长度
 *out		ret				0成功
 ****************************************************************/
-static ret_code_t rtc_i2c_device_read_byte(uint8_t address, uint8_t *p_read_byte, uint8_t length)
-{
+static ret_code_t rtc_i2c_device_read_byte(uint8_t address, uint8_t *p_read_byte, uint8_t length) {
 	ret_code_t ret;
-	
-	do
-	{
-	//写地址
-	uint8_t set_address;
-	set_address = address;
-	ret = nrf_drv_twi_tx(&m_twi_master_rtc, RTC_CHIP_REAL_ADDR, &set_address, 1, true);
-	if(ret !=NRF_SUCCESS)
-	{
-		break;
-	}
-	//读数据
-	ret = nrf_drv_twi_rx(&m_twi_master_rtc, RTC_CHIP_REAL_ADDR, p_read_byte, length);
-	}while(0);
+
+	do {
+		//写地址
+		uint8_t set_address;
+		set_address = address;
+		ret = nrf_drv_twi_tx(&m_twi_master_rtc, RTC_CHIP_REAL_ADDR, &set_address, 1, true);
+		if(ret !=NRF_SUCCESS) {
+			break;
+		}
+		//读数据
+		ret = nrf_drv_twi_rx(&m_twi_master_rtc, RTC_CHIP_REAL_ADDR, p_read_byte, length);
+	} while(0);
 	return ret;
-	
+
 }
 
 /*******************************************************
 *	初始化RTC芯片
 *in：	none
 *******************************************************/
-void rtc_init(void)
-{
+void rtc_init(void) {
 	//初始化RTC的IIC
 	rtc_iic_init();
-	
+
 	//使能RTC芯片
 	rtc_i2c_device_write_byte(PCF85163_Timer_control_ADDR, 0x83);
 	rtc_i2c_device_write_byte(PCF85163_Timer_ADDR, 0xff);
 #if defined(BLE_DOOR_DEBUG)
 	printf("rtc:pcf85163 init success\r\n");
 #endif
-	
+
 }
 
 /*****************************************
@@ -125,8 +116,7 @@ void rtc_init(void)
 *in：		value			要变换的hex
 *out：						变换后的BCD
 *****************************************/
-static uint8_t hex_2_bcd(uint8_t value)
-{
+static uint8_t hex_2_bcd(uint8_t value) {
 	return (((value/10)<<4) | (value%10));
 
 }
@@ -136,8 +126,7 @@ static uint8_t hex_2_bcd(uint8_t value)
 *in：		value		要变换的BCD
 *out：					变换后的hex
 *****************************************************/
-static uint8_t bcd_2_hex(uint8_t value)
-{
+static uint8_t bcd_2_hex(uint8_t value) {
 	return (((value & 0xf0)>>4)*10 + (value & 0x0f));
 
 }
@@ -147,8 +136,7 @@ static uint8_t bcd_2_hex(uint8_t value)
 *in：		*time_write			要写入的时间
 *out：		0成功
 *******************************************************/
-uint8_t	rtc_time_write(struct tm *time_write)
-{
+uint8_t	rtc_time_write(struct tm *time_write) {
 	uint8_t byte_write;
 	//停止RTC
 	rtc_i2c_device_write_byte(PCF85163_Timer_control_ADDR, 0x03);
@@ -176,13 +164,13 @@ uint8_t	rtc_time_write(struct tm *time_write)
 	//使能RTC
 	rtc_i2c_device_write_byte(PCF85163_Timer_control_ADDR, 0x83);
 	/*
-#if defined(BLE_DOOR_DEBUG)
+	#if defined(BLE_DOOR_DEBUG)
 	printf("rtc time set:%4d-%2d-%2d %2d:%2d:%2d\r\n",\
 			time_write->tm_year +1990, time_write->tm_mon + 1, \
 			time_write->tm_mday, time_write->tm_hour, \
 			time_write->tm_min, time_write->tm_sec);
-#endif
-*/
+	#endif
+	*/
 	return 0;
 
 }
@@ -192,12 +180,11 @@ uint8_t	rtc_time_write(struct tm *time_write)
 *in：		*time_read			读出的时间
 *out：					0成功
 ********************************************************/
-uint8_t rtc_time_read(struct tm *time_read)
-{
+uint8_t rtc_time_read(struct tm *time_read) {
 	uint8_t byte_read[7];
 	//读时间
 	rtc_i2c_device_read_byte(PCF85163_VL_seconds_ADDR, byte_read, 7);
-	
+
 	//写入秒
 	time_read->tm_sec = bcd_2_hex(0x7f & byte_read[0]);
 	//写入分
@@ -213,13 +200,13 @@ uint8_t rtc_time_read(struct tm *time_read)
 	//写入年
 	time_read->tm_year = bcd_2_hex(0xff & byte_read[6]) + 10;
 	/*
-#if defined(BLE_DOOR_DEBUG)
+	#if defined(BLE_DOOR_DEBUG)
 	printf("rtc time read:%4d-%2d-%2d %2d:%2d:%2d\r\n",\
 			time_read->tm_year +1990, time_read->tm_mon + 1, \
 			time_read->tm_mday, time_read->tm_hour, \
 			time_read->tm_min, time_read->tm_sec);
-#endif
-*/
+	#endif
+	*/
 	return 0;
 
 }

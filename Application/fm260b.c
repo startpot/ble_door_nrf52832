@@ -24,23 +24,19 @@ uint16_t	dr_fig_param_second =0x0000;
 /**********************************
 *发送自动搜索模板
 ***********************************/
-void fig_fm260b_send_autosearch(void)
-{
-	static uint8_t fig_cmd_autosearch[8]={ 0x1B, 0xFF, 0x22, 0x00, 0x00, 0x00, 0xFF, 0x3B};
-	for (uint32_t i = 0; i < 8; i++)
-	{
+void fig_fm260b_send_autosearch(void) {
+	static uint8_t fig_cmd_autosearch[8]= { 0x1B, 0xFF, 0x22, 0x00, 0x00, 0x00, 0xFF, 0x3B};
+	for (uint32_t i = 0; i < 8; i++) {
 		while(app_uart_put(fig_cmd_autosearch[i]) != NRF_SUCCESS);
 	}
 }
 
 
 
-static void ble_set_fig_free(void)
-{
-	static uint8_t fig_cmd_free[8]={0x1B,0xFF,0x00, 0x00,0x00, 0x00,0x00, 0x1A};
+static void ble_set_fig_free(void) {
+	static uint8_t fig_cmd_free[8]= {0x1B,0xFF,0x00, 0x00,0x00, 0x00,0x00, 0x1A};
 	//发送free指令，使模块进入低功耗
-	for (uint32_t i = 0; i < sizeof(fig_cmd_free); i++)
-	{
+	for (uint32_t i = 0; i < sizeof(fig_cmd_free); i++) {
 		while(app_uart_put(fig_cmd_free[i]) != NRF_SUCCESS);
 	}
 }
@@ -48,48 +44,43 @@ static void ble_set_fig_free(void)
 /*********************************
 *指纹模块应答包处理模块
 *********************************/
-void fig_fm260b_reply_check(void)
-{
+void fig_fm260b_reply_check(void) {
 	//------------- 初始化上电后 --------接收到准备命令
 	//返回包长2
 	if( (fig_recieve_data_length==2) &&\
-		(fig_recieve_data[0]==DR_READY_CODE) && (fig_recieve_data[1]==DR_READY_CODE ) )
-	{
+	        (fig_recieve_data[0]==DR_READY_CODE) && (fig_recieve_data[1]==DR_READY_CODE ) ) {
 		//设置指纹模块的状态位ture
 		fig_status = true;
 		fig_recieve_data_length = 0;
 	}
-			
+
 	//----------------ERROR CMD   REPLY----------错误的指令包
 	//返回包长5
 	if( (fig_recieve_data_length==5) &&\
-		( (fig_recieve_data[DR_FIG_R_RESULT_CODE_SITE] == DR_FIG_R_CMD_WRONG) ||\
-			(fig_recieve_data[DR_FIG_R_RESULT_CODE_SITE] == DR_FIG_R_PARAM_WRONG) ||\
-			(fig_recieve_data[DR_FIG_R_RESULT_CODE_SITE] == DR_FIG_R_SUM_WRONG) ) )
-	{
+	        ( (fig_recieve_data[DR_FIG_R_RESULT_CODE_SITE] == DR_FIG_R_CMD_WRONG) ||\
+	          (fig_recieve_data[DR_FIG_R_RESULT_CODE_SITE] == DR_FIG_R_PARAM_WRONG) ||\
+	          (fig_recieve_data[DR_FIG_R_RESULT_CODE_SITE] == DR_FIG_R_SUM_WRONG) ) ) {
 		//将结果返回上位机
 		ble_nus_string_send(&m_nus,fig_recieve_data,fig_recieve_data_length);
 		fig_recieve_data_length = 0;
 		//set fig free
 		ble_set_fig_free();
 	}
-			
+
 	//-------CMD 1-1  REPLY-----------------SetSys命令的应答包
 	//返回包长5
 	if( (fig_recieve_data_length==5)&&\
-		(fig_recieve_data[DR_FIG_R_CMD_CODE_SITE]== DR_FIG_CMD_SETSYS) )
-	{
+	        (fig_recieve_data[DR_FIG_R_CMD_CODE_SITE]== DR_FIG_CMD_SETSYS) ) {
 		//将结果返回上位机
 		ble_nus_string_send(&m_nus,fig_recieve_data,fig_recieve_data_length);
 		fig_recieve_data_length =0;
 	}
-			
+
 	//---------CMD 2-1 REPLY--------------ReadInfo命令的应答包
 	//检查单个指纹模板，返回包长5
 	if( (fig_recieve_data_length==5) &&\
-		(fig_recieve_data[DR_FIG_R_CMD_CODE_SITE] == DR_FIG_CMD_READINFO) &&\
-		(dr_fig_param_first == 0x0001) )
-	{
+	        (fig_recieve_data[DR_FIG_R_CMD_CODE_SITE] == DR_FIG_CMD_READINFO) &&\
+	        (dr_fig_param_first == 0x0001) ) {
 		//将结果返回上位机
 		ble_nus_string_send(&m_nus,fig_recieve_data,fig_recieve_data_length);
 		fig_recieve_data_length = 0;
@@ -99,9 +90,8 @@ void fig_fm260b_reply_check(void)
 	//-----------CMD 2-2 REPLY--------------ReadInfo命令的应该包
 	//读取指纹库连续64个ID号对应位置是否有指纹，返回包长13
 	if( (fig_recieve_data_length==13) &&\
-		(fig_recieve_data[DR_FIG_R_CMD_CODE_SITE] == DR_FIG_CMD_READINFO) &&\
-		(dr_fig_param_first == 0x0010) )
-	{
+	        (fig_recieve_data[DR_FIG_R_CMD_CODE_SITE] == DR_FIG_CMD_READINFO) &&\
+	        (dr_fig_param_first == 0x0010) ) {
 		ble_nus_string_send(&m_nus,fig_recieve_data,fig_recieve_data_length);
 		fig_recieve_data_length = 0;
 		//set fig free
@@ -110,9 +100,8 @@ void fig_fm260b_reply_check(void)
 	//-------------CMD 2-3 REPLY -------------ReadInfo命令的应答包
 	//读取产品型号，返回包长15
 	if( fig_recieve_data_length == 15 &&\
-		dr_fig_param_first == 0x0002 && dr_fig_param_second == 0x0001 &&\
-		fig_recieve_data[DR_FIG_R_CMD_CODE_SITE] == DR_FIG_CMD_READINFO)
-	{
+	        dr_fig_param_first == 0x0002 && dr_fig_param_second == 0x0001 &&\
+	        fig_recieve_data[DR_FIG_R_CMD_CODE_SITE] == DR_FIG_CMD_READINFO) {
 		//将结果返回上位机
 		ble_nus_string_send(&m_nus,fig_recieve_data,fig_recieve_data_length);
 		fig_recieve_data_length = 0;
@@ -122,9 +111,8 @@ void fig_fm260b_reply_check(void)
 	//-------------CMD 2-4 REPLY -------------ReadInfo命令的应答包
 	//读取软件版本号和日期，返回包长17
 	if( fig_recieve_data_length == 17 &&\
-		dr_fig_param_first == 0x0002 && dr_fig_param_second == 0x0002 &&\
-		fig_recieve_data[DR_FIG_R_CMD_CODE_SITE] == DR_FIG_CMD_READINFO)
-	{
+	        dr_fig_param_first == 0x0002 && dr_fig_param_second == 0x0002 &&\
+	        fig_recieve_data[DR_FIG_R_CMD_CODE_SITE] == DR_FIG_CMD_READINFO) {
 		//将结果返回上位机
 		ble_nus_string_send(&m_nus,fig_recieve_data,fig_recieve_data_length);
 		fig_recieve_data_length = 0;
@@ -134,9 +122,8 @@ void fig_fm260b_reply_check(void)
 	//-------------CMD 2-5 REPLY -------------ReadInfo命令的应答包
 	//读取指纹库容量，返回包长7
 	if( fig_recieve_data_length == 7 &&\
-		dr_fig_param_first == 0x0002 && dr_fig_param_second == 0x0003 &&\
-		fig_recieve_data[DR_FIG_R_CMD_CODE_SITE] == DR_FIG_CMD_READINFO)
-	{
+	        dr_fig_param_first == 0x0002 && dr_fig_param_second == 0x0003 &&\
+	        fig_recieve_data[DR_FIG_R_CMD_CODE_SITE] == DR_FIG_CMD_READINFO) {
 		//将结果返回上位机
 		ble_nus_string_send(&m_nus,fig_recieve_data,fig_recieve_data_length);
 		fig_recieve_data_length = 0;
@@ -146,80 +133,73 @@ void fig_fm260b_reply_check(void)
 	//-------------CMD 2-6 REPLY -------------ReadInfo命令的应答包
 	//读取SN号，返回包长9
 	if( fig_recieve_data_length == 9 &&\
-		dr_fig_param_first == 0x0002 && dr_fig_param_second == 0x0004 &&\
-		fig_recieve_data[DR_FIG_R_CMD_CODE_SITE] == DR_FIG_CMD_READINFO)
-	{
+	        dr_fig_param_first == 0x0002 && dr_fig_param_second == 0x0004 &&\
+	        fig_recieve_data[DR_FIG_R_CMD_CODE_SITE] == DR_FIG_CMD_READINFO) {
 		//将结果返回上位机
 		ble_nus_string_send(&m_nus,fig_recieve_data,fig_recieve_data_length);
 		fig_recieve_data_length = 0;
 		//set fig free
 		ble_set_fig_free();
 	}
-			
+
 	//-------------CMD 2-7 REPLY-----------ReadInfo命令的应答包
 	//探测手指，返回包长5
 	if( (fig_recieve_data_length == 5) && \
-		(dr_fig_param_first==0x0008) && (dr_fig_param_second == 0x0001)  && \
-		fig_recieve_data[DR_FIG_R_CMD_CODE_SITE] == DR_FIG_CMD_READINFO )
-	{
+	        (dr_fig_param_first==0x0008) && (dr_fig_param_second == 0x0001)  && \
+	        fig_recieve_data[DR_FIG_R_CMD_CODE_SITE] == DR_FIG_CMD_READINFO ) {
 		//将结果返回上位机
 		ble_nus_string_send(&m_nus,fig_recieve_data,fig_recieve_data_length);
 		fig_recieve_data_length = 0;
 	}
-			
+
 	//-------CMD 3-1 REPLY ----自动注册模板AutoEnroll
 	//注释：直接上传结果给上位机，蓝牙芯片不做控制，其实手指一直放到上面即可
 	//返回包长5
 	if( (fig_recieve_data_length == 5) && \
-		(fig_recieve_data[DR_FIG_R_CMD_CODE_SITE]== DR_FIG_CMD_AUTOENROLL) )
-	{
+	        (fig_recieve_data[DR_FIG_R_CMD_CODE_SITE]== DR_FIG_CMD_AUTOENROLL) ) {
 		//将结果返回上位机
 		ble_nus_string_send(&m_nus,fig_recieve_data,fig_recieve_data_length);
 		fig_recieve_data_length = 0;
 		//判断自动注册是否完成
 		if( (fig_recieve_data[DR_FIG_R_RESULT_CODE_SITE] == DR_FIG_R_FINISH_TRUE) || \
-			(fig_recieve_data[DR_FIG_R_RESULT_CODE_SITE] == DR_FIG_R_FINISH_FALSE) )
-		{
+		        (fig_recieve_data[DR_FIG_R_RESULT_CODE_SITE] == DR_FIG_R_FINISH_FALSE) ) {
 			is_fm260b_autoenroll = false;
 			//注册指纹完成，蜂鸣器响5次
 			beep_didi(5);
 		}
 	}
-				
+
 	//-----------CMD 4-1 REPLY----------自动搜索模块AutoSearch,按下手指发，发送的前两步的指令
 	//返回包长5
 	if( (fig_recieve_data_length == 5) && \
-		(fig_recieve_data[DR_FIG_R_CMD_CODE_SITE] == DR_FIG_CMD_AUTOSEARCH) )
-	{
+	        (fig_recieve_data[DR_FIG_R_CMD_CODE_SITE] == DR_FIG_CMD_AUTOSEARCH) ) {
 		//判断结果码
-		switch(fig_recieve_data[DR_FIG_R_RESULT_CODE_SITE])
-		{
-			case 0x00://第一个应答包，之后连续连续探测手指，将结果返回给上位机
-				//蜂鸣器滴滴一声
-				//beep_didi(1);
-				//将结果返回上位机
-				ble_nus_string_send(&m_nus,fig_recieve_data,fig_recieve_data_length);
-				fig_recieve_data_length = 0;
+		switch(fig_recieve_data[DR_FIG_R_RESULT_CODE_SITE]) {
+		case 0x00://第一个应答包，之后连续连续探测手指，将结果返回给上位机
+			//蜂鸣器滴滴一声
+			//beep_didi(1);
+			//将结果返回上位机
+			ble_nus_string_send(&m_nus,fig_recieve_data,fig_recieve_data_length);
+			fig_recieve_data_length = 0;
 			break;
-			case 0x05://第二个应答包，提示已录好要比对的指纹，将结果返回给上位机
-				//蜂鸣器滴滴二声
-				//beep_didi(2);
-				//将结果返回上位机
-				ble_nus_string_send(&m_nus,fig_recieve_data,fig_recieve_data_length);
-				fig_recieve_data_length = 0;
+		case 0x05://第二个应答包，提示已录好要比对的指纹，将结果返回给上位机
+			//蜂鸣器滴滴二声
+			//beep_didi(2);
+			//将结果返回上位机
+			ble_nus_string_send(&m_nus,fig_recieve_data,fig_recieve_data_length);
+			fig_recieve_data_length = 0;
 			break;
-					
-			default:
-			break;	
+
+		default:
+			break;
 		}
 	}
-			
+
 	//-----------CMD 4-2 REPLY------自动搜索模板AutoSearch，第三步，如果检索到指纹，发送结果
 	//返回包长9
 	if( (fig_recieve_data_length == 9) &&  \
-		(fig_recieve_data[DR_FIG_R_CMD_CODE_SITE] == DR_FIG_CMD_AUTOSEARCH)  && \
-					(fig_recieve_data[DR_FIG_R_RESULT_CODE_SITE] ==DR_FIG_R_FINISH_TRUE) )
-	{
+	        (fig_recieve_data[DR_FIG_R_CMD_CODE_SITE] == DR_FIG_CMD_AUTOSEARCH)  && \
+	        (fig_recieve_data[DR_FIG_R_RESULT_CODE_SITE] ==DR_FIG_R_FINISH_TRUE) ) {
 		//蜂鸣器滴滴三声
 		beep_didi(3);
 		//开门
@@ -230,13 +210,12 @@ void fig_fm260b_reply_check(void)
 		//发送free指令，使模块进入低功耗
 		ble_set_fig_free();
 	}
-					
+
 	//------------CMD 4-3 REPLY--------自动搜索模板AutoSearch,第三步，如果无比对的指纹
 	//返回包长6
 	if( (fig_recieve_data_length == 6) &&  \
-		(fig_recieve_data[DR_FIG_R_CMD_CODE_SITE] == DR_FIG_CMD_AUTOSEARCH)  && \
-		(fig_recieve_data[DR_FIG_R_RESULT_CODE_SITE] == DR_FIG_R_FINISH_FALSE) )
-	{
+	        (fig_recieve_data[DR_FIG_R_CMD_CODE_SITE] == DR_FIG_CMD_AUTOSEARCH)  && \
+	        (fig_recieve_data[DR_FIG_R_RESULT_CODE_SITE] == DR_FIG_R_FINISH_FALSE) ) {
 		//搜索指纹失败，不开门，将结果返回给上位机
 		//蜂鸣器滴滴四声
 		beep_didi(4);
@@ -244,14 +223,13 @@ void fig_fm260b_reply_check(void)
 		ble_nus_string_send(&m_nus,fig_recieve_data,fig_recieve_data_length);
 		fig_recieve_data_length = 0;
 		//发送free指令，使模块进入低功耗
-		ble_set_fig_free();	
-	}	
-			
+		ble_set_fig_free();
+	}
+
 	//--------CMD 5-1 REPLY -------------删除指纹模块Delete
 	//返回包长5
 	if( (fig_recieve_data_length == 5) && \
-		(fig_recieve_data[DR_FIG_R_CMD_CODE_SITE] == DR_FIG_CMD_DELETE) )
-	{
+	        (fig_recieve_data[DR_FIG_R_CMD_CODE_SITE] == DR_FIG_CMD_DELETE) ) {
 		//将结果返回上位机
 		ble_nus_string_send(&m_nus,fig_recieve_data,fig_recieve_data_length);
 		fig_recieve_data_length = 0;

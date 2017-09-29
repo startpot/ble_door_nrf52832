@@ -58,40 +58,53 @@
 /***************************
 * 动态口令算法测试程序
 ***************************/
-void sm4_test(void)
-{
+void sm4_test(void) {
 	struct sm4_context sm4_ctx;
 	uint8_t output[16];
 	uint8_t key[16] = {	0x01, 0x23, 0x45, 0x67, \
-						0x89, 0xab, 0xcd, 0xef, \
-						0xfe, 0xdc, 0xba, 0x98, \
-						0x76, 0x54, 0x32, 0x10};
+	                    0x89, 0xab, 0xcd, 0xef, \
+	                    0xfe, 0xdc, 0xba, 0x98, \
+	                    0x76, 0x54, 0x32, 0x10
+	                  };
 	uint8_t data[16] = { 0x01, 0x23, 0x45, 0x67, \
-						 0x89, 0xab, 0xcd, 0xef, \
-						 0xfe, 0xdc, 0xba, 0x98, \
-						 0x76, 0x54, 0x32, 0x10};
-	
+	                     0x89, 0xab, 0xcd, 0xef, \
+	                     0xfe, 0xdc, 0xba, 0x98, \
+	                     0x76, 0x54, 0x32, 0x10
+	                   };
+
 	sm4_ctx.mode = SM4_ENCRYPT;
 	sm4_ctx.sk[0] = 0x00;
-							 
+
 	sm4_setkey_enc(&sm4_ctx, key);
-					 
+
 	// output = 			 0x68, 0x1e, 0xdf, 0x34, 0xd2, 0x06, 0x96, 0x5e
 	//						 0x86, 0xb3, 0xe9, 0x4f, 0x53, 0x6e, 0x42, 0x46
 	sm4_crypt_ecb( &sm4_ctx, SM4_ENCRYPT, 16, data, output);
 
 	uint8_t DynPwd[6];
-	
+
 	// DPasswd
-	key[0] = 0x12; key[1] = 0x34; key[2] = 0x56; key[3] = 0x78;
-	key[4] = 0x90; key[5] = 0xab; key[6] = 0xcd; key[7] = 0xef;
-	key[8] = 0x12; key[9] = 0x34; key[10] = 0x56; key[11] = 0x78;
-	key[12] = 0x90; key[13] = 0xab; key[14] = 0xcd; key[15] = 0xef;
+	key[0] = 0x12;
+	key[1] = 0x34;
+	key[2] = 0x56;
+	key[3] = 0x78;
+	key[4] = 0x90;
+	key[5] = 0xab;
+	key[6] = 0xcd;
+	key[7] = 0xef;
+	key[8] = 0x12;
+	key[9] = 0x34;
+	key[10] = 0x56;
+	key[11] = 0x78;
+	key[12] = 0x90;
+	key[13] = 0xab;
+	key[14] = 0xcd;
+	key[15] = 0xef;
 	uint16_t Interval = 0x01;
 	uint64_t time = 0x4feab9cd;
 	uint32_t counter = 0x000004d2;
 	uint8_t Challenge[4] = {0x35, 0x36, 0x37, 0x38};
-	
+
 	// SM4 encoder output is
 	// 88 0d 6a e7 7e cf 8e e5 23 5c 71 98 e1 3f 15 9c
 	// TruncateSM4 output is
@@ -100,42 +113,36 @@ void sm4_test(void)
 	SM4_DPasswd(key, time, Interval, counter, Challenge, DynPwd);
 }
 
-
-static void set_mac_from_interflash(void)
-{
+static void set_mac_from_interflash(void) {
 	uint32_t err_code;
 	//如果配置了mac，则使用配置的mac
-	if(mac[0] =='w')
-	{
+	if(mac[0] =='w') {
 		memset(addr.addr, 0, 6);
 		//拷贝设置的mac
 		memcpy(addr.addr, &mac[2], 6);
 		err_code = sd_ble_gap_address_set(BLE_GAP_ADDR_CYCLE_MODE_NONE,&addr);
-		if(err_code == NRF_SUCCESS)
-		{
+		if(err_code == NRF_SUCCESS) {
 #if defined(BLE_DOOR_DEBUG)
 			printf(" use mac setted by user:");
-			for(int i=0; i<6;i++)
-			{
+			for(int i=0; i<6; i++) {
 				printf("%x ",mac[2+i]);
 			}
 			printf("\r\n");
 #endif
-		}		
+		}
 	}
 }
 
-static void set_peer_password(void)
-{
+static void set_peer_password(void) {
 	uint32_t err_code;
 	//添加配对密码
 	char *passcode = "123456";
 	ble_opt_t static_option;
-	
+
 	static_option.gap_opt.passkey.p_passkey = (uint8_t *)passcode;
 	err_code = sd_ble_opt_set(BLE_GAP_OPT_PASSKEY, &static_option);
 	APP_ERROR_CHECK(err_code);
-	
+
 #if defined(BLE_DOOR_DEBUG)
 	printf("ble pair pin set:%s \n",passcode);
 	printf("\r\n");
@@ -145,32 +152,31 @@ static void set_peer_password(void)
 /*****************************
 *Application main function.
 *****************************/
-int main(void)
-{
-    uint32_t err_code;
-    bool erase_bonds;
-    
-	
+int main(void) {
+	uint32_t err_code;
+	bool erase_bonds;
+
+
 	NRF_UICR->NFCPINS = 0;
-	
-    //Initialize
-    timers_init();
+
+	//Initialize
+	timers_init();
 	uart_init();
-  //  buttons_leds_init(&erase_bonds);
-    ble_stack_init();
+	//  buttons_leds_init(&erase_bonds);
+	ble_stack_init();
 	device_manager_init(erase_bonds);
 	//初始化内部flash，和各个存储变量，紧跟在device_manager_init后面，读取mac和蓝牙名称
 	flash_init();
-	
+
 	//从内部flash中读取mac，设置
 	set_mac_from_interflash();
 
-	
-    gap_params_init();
-    services_init();
-    advertising_init();
-    conn_params_init();
-    
+
+	gap_params_init();
+	services_init();
+	advertising_init();
+	conn_params_init();
+
 	//初始化所有参数
 	set_default_params();
 	//初始化灯，拉高，灭
@@ -179,7 +185,7 @@ int main(void)
 	leds_on(LED_13,5);
 
 
-	
+
 	//初始化电机
 	moto_init();
 	//初始化蜂鸣器
@@ -193,29 +199,27 @@ int main(void)
 	rtc_init();
 	//初始化触摸屏和指纹的中断函数
 	touch_finger_int_init();
-	
+
 	//设置配对密码
 //	set_peer_password();
 
 	application_timers_start();
-    err_code = ble_advertising_start(BLE_ADV_MODE_FAST);
-    APP_ERROR_CHECK(err_code);
+	err_code = ble_advertising_start(BLE_ADV_MODE_FAST);
+	APP_ERROR_CHECK(err_code);
 //	adverts_start();
-	
+
 	//使能电池服务
 	battery_level_init();
-	
-    //Enter main loop.
-    for (;;)
-    {
-        power_manage();
-		
+
+	//Enter main loop.
+	for (;;) {
+		power_manage();
+
 		//判断命令
-		if(operate_code_setted ==true)
-		{
+		if(operate_code_setted ==true) {
 			operate_code_check(nus_data_recieve, nus_data_recieve_length);
 			operate_code_setted = false;
 		}
-    }
-	
+	}
+
 }

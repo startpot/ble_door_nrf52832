@@ -13,7 +13,7 @@
 
 
 int SM4_DPasswd(uint8_t * pKey, uint64_t Time, uint16_t Interval, uint32_t Counter, \
-					uint8_t* pChallenge, uint8_t* pDynPwd);
+                uint8_t* pChallenge, uint8_t* pDynPwd);
 
 // SM4的动态口令生成算法输入、输出用例
 //				K							 T		 C	 	Q	 P(SM4)
@@ -27,5 +27,5 @@ int SM4_DPasswd(uint8_t * pKey, uint64_t Time, uint16_t Interval, uint32_t Count
 //	58ade3698fe28dcb6925010dd236caef	1340783829	2547  2058	 499811
 //	58ade365201d80cbdd236caef6925010	1340783771	6031  2058	 565180
 //	65201d80cb58ade3dd236caef6925010	1340783815	6580  1047	 724654
-	
+
 #endif
