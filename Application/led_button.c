@@ -224,7 +224,7 @@ bool keys_input_check_normal_keys(char *keys_input_p, uint8_t keys_input_length,
 			//获取存储的密码
 			interflash_read((uint8_t *)&key_store_check, sizeof(struct key_store_struct), \
 			                (KEY_STORE_OFFSET + 1 + i));
-			memset(normal_keys_store, 7, 0);
+			memset(normal_keys_store, 0, 7);
 			memcpy(normal_keys_store, key_store_check.key_store, 6);
 			normal_keys_store[6] = '\0';
 			//对比密码是否一致
