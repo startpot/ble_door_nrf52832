@@ -25,6 +25,8 @@ extern char			key_express_value;
 extern char			key_input[KEY_MAX_NUMBER];
 extern uint8_t		key_input_site;
 
+extern char			key_marry[KEY_LENGTH];
+
 //输入的密码的时间
 extern struct tm	key_input_time_tm;
 extern time_t		key_input_time_t;

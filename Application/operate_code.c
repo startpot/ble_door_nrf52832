@@ -85,7 +85,24 @@ static int cmd_set_key(uint8_t *p_data, uint16_t length) {
 		ble_door_open();
 		//记录开门
 		door_open_record_flash((char *)p_data, 6, time_get_t);
-
+		//记录钥匙
+		//记录密码
+		//组织密码结构体
+		memset(&key_store_struct_set, 0 , sizeof(struct key_store_struct));
+		//写密码
+		memcpy(&key_store_struct_set.key_store, p_data, 6);
+		//写有效时间
+		key_store_struct_set.key_use_time = p_data[6]*0x100 + p_data[7];
+		//写控制字
+		key_store_struct_set.control_bits = p_data[8];
+		//写版本号
+		key_store_struct_set.key_vesion = p_data[9];
+		//写存入时间
+		memcpy(&key_store_struct_set.key_store_time, &time_get_t, sizeof(time_t));
+		//直接将钥匙记录到flash
+		key_store_write(&key_store_struct_set);
+		
+		
 		//返回ff00
 		nus_data_send[0] = 0xff;
 		nus_data_send[1] = 0x00;

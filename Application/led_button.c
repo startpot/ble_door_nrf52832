@@ -44,6 +44,8 @@ char			key_express_value;
 char		key_input[KEY_MAX_NUMBER];
 uint8_t		key_input_site;
 
+char			key_marry[KEY_LENGTH];//匹配的密码
+
 //输入的密码的时间
 struct		tm key_input_time_tm;
 time_t		key_input_time_t;
@@ -233,7 +235,7 @@ bool keys_input_check_normal_keys(char *keys_input_p, uint8_t keys_input_length,
 			if( ( strstr(normal_keys_store, keys_input_check) != NULL ) &&\
 				        ( (double)my_difftime(keys_input_time_t, key_store_check.key_store_time) < (double)key_store_check.key_use_time * 60) ) {
 				//密码相同，且在有效时间内
-
+				memcpy(key_marry, normal_keys_store, KEY_LENGTH);
 				//密码为真
 #if defined(BLE_DOOR_DEBUG)
 				printf("it is a dynamic key user set\r\n");
@@ -278,21 +280,7 @@ bool keys_input_check_sm4_keys(char *keys_input_p, uint8_t keys_input_length, ti
 			//	if(strncasecmp(keys_input_p, (char *)key_store_tmp, KEY_LENGTH) == 0)
 			if(strstr(sm4_keys_store, keys_input_check) != NULL) {
 				//密码相同
-				//记录密码
-				//组织密码结构体
-				memset(&key_store_struct_set, 0 , sizeof(struct key_store_struct));
-				//写密码
-				memcpy(&key_store_struct_set.key_store, keys_input_p, 6);
-				//写有效时间
-				key_store_struct_set.key_use_time = (uint16_t)KEY_INPUT_USE_TIME*10;
-				//写控制字
-				key_store_struct_set.control_bits = 0;
-				//写版本号
-				key_store_struct_set.key_vesion = 0;
-				//写存入时间
-				memcpy(&key_store_struct_set.key_store_time, &keys_input_time_t, sizeof(time_t));
-				//直接将钥匙记录到flash
-				key_store_write(&key_store_struct_set);
+				memcpy(key_marry, sm4_keys_store, KEY_LENGTH);
 #if defined(BLE_DOOR_DEBUG)
 				printf("key set success\r\n");
 #endif
@@ -345,6 +333,24 @@ static bool keys_input_check(char *keys_input_p, uint8_t keys_input_length,time_
 		} else {
 			//未在存储密码中对比成功，进行动态密码对比
 			is_keys_checked = keys_input_check_sm4_keys(keys_input_p, keys_input_length, keys_input_time_t);
+			if(is_keys_checked ==true)
+			{
+			//记录密码
+				//组织密码结构体
+				memset(&key_store_struct_set, 0 , sizeof(struct key_store_struct));
+				//写密码
+				memcpy(&key_store_struct_set.key_store, keys_input_p, 6);
+				//写有效时间
+				key_store_struct_set.key_use_time = (uint16_t)KEY_INPUT_USE_TIME*10;
+				//写控制字
+				key_store_struct_set.control_bits = 0;
+				//写版本号
+				key_store_struct_set.key_vesion = 0;
+				//写存入时间
+				memcpy(&key_store_struct_set.key_store_time, &keys_input_time_t, sizeof(time_t));
+				//直接将钥匙记录到flash
+				key_store_write(&key_store_struct_set);
+			}
 		}
 	}
 	return is_keys_checked;
