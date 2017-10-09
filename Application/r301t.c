@@ -210,6 +210,8 @@ int fig_r301t_reply_check(void) {
 					ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 					//如果不是第一步，则直接退出
 					r301t_autosearch_step = 0;
+					//关闭指纹模块电源
+					nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
 				}
 				fig_recieve_data_length =0;
 			} else {
