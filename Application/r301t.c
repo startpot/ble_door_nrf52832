@@ -178,8 +178,13 @@ int fig_r301t_reply_check(void) {
 		for(int i = 0; i <FIG_INFO_NUMBER; i++) {
 			pstorage_block_identifier_get(&block_id_flash_store, \
 			                              (pstorage_size_t)(FIG_INFO_OFFSET+ i), &block_id_fig_info);
-			pstorage_clear(&block_id_fig_info, sizeof(struct fig_info));
+			pstorage_clear(&block_id_fig_info, BLOCK_STORE_SIZE);
 		}
+		//返回包
+		nus_data_send[0] = ble_operate_code + 0x40;
+		nus_data_send[1] = 0x00;
+		nus_data_send_length = 2;
+		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 		break;
 
 	default:

@@ -662,7 +662,7 @@ exe_enroll_fig:
 	enroll_fig_id[1] = empty_1st_id & 0xff;
 	//3、获取存储的指纹信息模块
 	memset(&fig_info_set, 0, sizeof(struct fig_info));
-	memcpy(fig_info_set.fig_info_data, &p_data[1], 4);//指纹描述信息
+	memcpy(fig_info_set.fig_info_data, &p_data[1], sizeof(fig_info_set.fig_info_data));//指纹描述信息8B
 	fig_info_set.is_store = 'w';
 	fig_info_set.fig_info_id = empty_1st_id;
 
@@ -765,8 +765,8 @@ static int get_fig_info(uint8_t *p_data, uint16_t length) {
 			nus_data_send[0] = p_data[0] + 0x40;
 			nus_data_send[1] = fig_info_get.fig_info_id / 0x100;
 			nus_data_send[2] = fig_info_get.fig_info_id &0xff;
-			memcpy(&nus_data_send[3], fig_info_get.fig_info_data, 4);
-			nus_data_send_length = 7;
+			memcpy(&nus_data_send[3], fig_info_get.fig_info_data, sizeof(fig_info_get.fig_info_data));
+			nus_data_send_length = 3+sizeof(fig_info_get.fig_info_data);
 			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 		}
 	}
@@ -791,6 +791,22 @@ static void stop_fig(uint8_t *p_data, uint16_t length){
 	reply_data[0] = 0x00;
 	ble_reply(p_data[0], reply_data, sizeof(reply_data));
 	
+}
+
+/****************************************
+*删除所有指纹信息
+****************************************/
+static void delete_all_fig(uint8_t *p_data, uint16_t length){
+	//1.设置指令码为GR_FIG_CMD_EMPTY
+	fig_cmd_code = GR_FIG_CMD_EMPTY;
+	ble_operate_code = p_data[0];
+	//2.打开指纹模块电源
+	nrf_gpio_pin_set(BATTERY_LEVEL_EN);
+	//上电需要0.5s的准备时间
+	nrf_delay_ms(1000);
+	//3.发送删除所有指纹库命令
+	fig_r301t_send_cmd(0x01, sizeof(r301t_send_empty_cmd), \
+	                   r301t_send_empty_cmd);
 }
 
 /*****************************
@@ -955,7 +971,7 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 		break;
 
 	case ENROLL_FIG://注册指纹
-		if(length == 5) {
+		if(length == 17) {//指令码+描述信息16B
 			if(is_superkey_checked == true) { //如果验证了超级密码
 				enroll_fig(p_data, length);
 			} else {
@@ -968,7 +984,7 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 		break;
 
 	case DELETE_FIG://删除指纹
-		if(length == 7) {
+		if(length == 19) {//指令码+描述信息16B
 			if(is_superkey_checked == true) { //如果验证了超级密码
 				delete_fig(p_data, length);
 			} else {
@@ -992,6 +1008,15 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 	case STOP_FIG://停止指纹模块
 		if(is_superkey_checked == true) { //如果验证了超级密码
 			stop_fig(p_data, length);
+		} else {
+			//向手机发送失败信息"skey check fail"
+			ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+			                    strlen(checked_superkey_false) );
+		}
+		break;
+	case DELETE_ALL_FIG://删除所有指纹信息
+		if(is_superkey_checked == true) { //如果验证了超级密码
+			delete_all_fig(p_data, length);
 		} else {
 			//向手机发送失败信息"skey check fail"
 			ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \

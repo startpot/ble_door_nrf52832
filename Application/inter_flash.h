@@ -47,7 +47,7 @@ extern struct door_open_record		door_open_record_get;
 struct fig_info {
 	uint32_t	is_store;	//是否存储
 	uint32_t	fig_info_id;//指纹信息的ID
-	char		fig_info_data[4];//指纹的描述信息
+	char		fig_info_data[16];//指纹的描述信息16B
 };
 
 extern struct fig_info	fig_info_set;
