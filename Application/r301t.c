@@ -197,27 +197,29 @@ int fig_r301t_reply_check(void) {
 		if(	r301t_autosearch_step >0) {
 			//手指按下设置的自动搜索模式，
 			//应答包失败
-			if(fig_recieve_data[9] !=0x00) {
-				//应答失败，鸣笛4次
-				beep_didi(4);
+			if(fig_recieve_data[9] !=0x00) {//失败的话，关闭电源模块，将步骤和错误码发送给上位机
 				//失败情况，如果是第一步则重复发GR_GetImage
-				if(r301t_autosearch_step == 1) {
+			/*	if(r301t_autosearch_step == 1) {
 					//第一步执行失败，继续发送getimage命令
 					fig_r301t_send_cmd(0x01, sizeof(r301t_send_getimg_cmd), \
 					                   r301t_send_getimg_cmd);
-				} else {
+					fig_recieve_data_length =0;
+				} else {*/
+					//关闭指纹模块电源
+					nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
 					//返回第几步
 					//将命令加上0x40,返回给app
 					nus_data_send[0] = ble_operate_code;
 					//第几步
 					nus_data_send[1] = r301t_autosearch_step;
-					nus_data_send_length = 2;
+					nus_data_send[2] = fig_recieve_data[9];
+					nus_data_send_length = 3;
 					ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+					//应答失败，鸣笛4次
+					beep_didi(4);
 					//如果不是第一步，则直接退出
 					r301t_autosearch_step = 0;
-					//关闭指纹模块电源
-					nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
-				}
+			//	}
 				fig_recieve_data_length =0;
 			} else {
 				//判断自动搜索的步骤
