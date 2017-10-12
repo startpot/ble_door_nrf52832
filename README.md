@@ -6,4 +6,8 @@
 ## 2017.9.28 test
 指纹模块已测试注册和搜索功能
 ## 2017.9.30
-内部flash存储的相关程序，必须设置若干pstorage_handle_t，保证读取的flash的handle是全局变量
+内部flash存储的相关程序，必须设置若干pstorage_handle_t，<br>
+保证读取的flash的handle是全局变量.<br>
+## 2017.10.12
+程序中存储的数据结构体以及数据应该是4字节对齐的，<br>
+在程序中,应该在定义要存储的数据结构体时用#pragram pack(n)强制对齐和#pragram pack()取消强制对齐。
