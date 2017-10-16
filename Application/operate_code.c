@@ -599,9 +599,8 @@ static void user_unbind_cmd(uint8_t *p_data, uint16_t length) {
 	fig_r301t_send_cmd(0x01, sizeof(r301t_send_empty_cmd), r301t_send_empty_cmd);
 	//2.3、获取指令码,此指令码需要在回复命令处理中使用
 	fig_cmd_code = r301t_send_empty_cmd[0];
-	//3、向上位机发送返回包
-	reply_data[0] = 0x00;
-	ble_reply(p_data[0], reply_data, sizeof(reply_data));
+	//3、获取命令包
+	ble_operate_code = p_data[0];
 
 }
 

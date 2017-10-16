@@ -180,7 +180,6 @@ bool keys_input_check_super_keys(char *keys_input_p, uint8_t keys_input_length) 
 		super_key_store[12] = '\0';
 
 		//对比
-		//	if(strncasecmp(keys_input_p,super_key, SUPER_KEY_LENGTH) == 0)
 		if(strstr(keys_input_p, super_key) != NULL) {
 			//密码为真
 #if defined(BLE_DOOR_DEBUG)
@@ -199,13 +198,13 @@ bool keys_input_check_super_keys(char *keys_input_p, uint8_t keys_input_length) 
 *对比已经存储的密码
 *************************************/
 bool keys_input_check_normal_keys(char *keys_input_p, uint8_t keys_input_length, time_t keys_input_time_t) {
-	static char keys_input_check[7];
+	static char keys_input_check[13];
 	static char normal_keys_store[7];
 
 	//将输入密码变成字符串
-	memset(keys_input_check, 0, 7);
-	memcpy(keys_input_check, keys_input_p, 6);
-	keys_input_check[6] = '\0';
+	memset(keys_input_check, 0, 13);
+	memcpy(keys_input_check, keys_input_p, keys_input_length);
+	keys_input_check[keys_input_length + 1] = '\0';
 
 	//普通密码
 	//获取普通密码的个数,小端字节
@@ -230,8 +229,6 @@ bool keys_input_check_normal_keys(char *keys_input_p, uint8_t keys_input_length,
 			memcpy(normal_keys_store, key_store_check.key_store, 6);
 			normal_keys_store[6] = '\0';
 			//对比密码是否一致
-			//	if( ( strncasecmp(keys_input_p, (char *)&key_store_check.key_store, KEY_LENGTH) == 0 ) &&\
-			( (double)my_difftime(keys_input_time_t, key_store_check.key_store_time) < (double)key_store_check.key_use_time * 60) )
 			if( ( strstr(normal_keys_store, keys_input_check) != NULL ) &&\
 				        ( (double)my_difftime(keys_input_time_t, key_store_check.key_store_time) < (double)key_store_check.key_use_time * 60) ) {
 				//密码相同，且在有效时间内
@@ -252,13 +249,13 @@ bool keys_input_check_normal_keys(char *keys_input_p, uint8_t keys_input_length,
 * 对比动态种子产生的密钥
 *************************************/
 bool keys_input_check_sm4_keys(char *keys_input_p, uint8_t keys_input_length, time_t keys_input_time_t) {
-	static char keys_input_check[7];
+	static char keys_input_check[13];
 	static char sm4_keys_store[7];
 
 	//将输入密码变成字符串
-	memset(keys_input_check, 0, 7);
-	memcpy(keys_input_check, keys_input_p, 6);
-	keys_input_check[6] = '\0';
+	memset(keys_input_check, 0, 13);
+	memcpy(keys_input_check, keys_input_p, keys_input_length);
+	keys_input_check[keys_input_length + 1] = '\0';
 
 	//动态密码，获取种子
 	interflash_read(flash_read_data, 32, SEED_OFFSET);
@@ -276,8 +273,6 @@ bool keys_input_check_sm4_keys(char *keys_input_p, uint8_t keys_input_length, ti
 			memcpy(sm4_keys_store, key_store_tmp, 6);
 			sm4_keys_store[6] = '\0';
 
-
-			//	if(strncasecmp(keys_input_p, (char *)key_store_tmp, KEY_LENGTH) == 0)
 			if(strstr(sm4_keys_store, keys_input_check) != NULL) {
 				//密码相同
 				memcpy(key_marry, sm4_keys_store, KEY_LENGTH);
@@ -302,55 +297,31 @@ bool keys_input_check_sm4_keys(char *keys_input_p, uint8_t keys_input_length, ti
 ******************************************/
 static bool keys_input_check(char *keys_input_p, uint8_t keys_input_length,time_t keys_input_time_t) {
 	bool is_keys_checked = false;
-	enum  keys_type keys_input_type;
 
-	//1、对比密码长度，决定密码是普通密码还是超级管理员密码
-	switch(keys_input_length) {
-	case SUPER_KEY_LENGTH:
-		keys_input_type = super_keys;//超级管理员密码
-		break;
-
-	case KEY_LENGTH:
-		keys_input_type = normal_keys;//普通密码
-		break;
-
-	default:
-		keys_input_type = unkown_keys;
-		break;
-	}
-	//2、根据密码的类型进行相应的对比
-	//2.1、首先进行超级管理员密码对比
-	if(keys_input_type == super_keys) {
-		is_keys_checked = keys_input_check_super_keys(keys_input_p, keys_input_length);
-		return is_keys_checked;
-	}//2.2、其次进行存储密码和动态密码对比
-	else if(keys_input_type == normal_keys) {
-		//6位密码，首先进行存储密码的比对，再进行动态密码比对
-
-		is_keys_checked = keys_input_check_normal_keys(keys_input_p, keys_input_length, keys_input_time_t);
-		if(is_keys_checked == true) {
-			return true;
-		} else {
-			//未在存储密码中对比成功，进行动态密码对比
-			is_keys_checked = keys_input_check_sm4_keys(keys_input_p, keys_input_length, keys_input_time_t);
-			if(is_keys_checked ==true)
-			{
-			//记录密码
-				//组织密码结构体
-				memset(&key_store_struct_set, 0 , sizeof(struct key_store_struct));
-				//写密码
-				memcpy(&key_store_struct_set.key_store, keys_input_p, 6);
-				//写有效时间
-				key_store_struct_set.key_use_time = (uint16_t)KEY_INPUT_USE_TIME*10;
-				//写控制字
-				key_store_struct_set.control_bits = 0;
-				//写版本号
-				key_store_struct_set.key_vesion = 0;
-				//写存入时间
-				memcpy(&key_store_struct_set.key_store_time, &keys_input_time_t, sizeof(time_t));
-				//直接将钥匙记录到flash
-				key_store_write(&key_store_struct_set);
-			}
+	//1首先进行普通密码的对比
+	is_keys_checked = keys_input_check_normal_keys(keys_input_p, keys_input_length, keys_input_time_t);
+	if(is_keys_checked == true) {
+		return true;
+	} else {
+		//2 未在存储密码中对比成功，进行动态密码对比
+		is_keys_checked = keys_input_check_sm4_keys(keys_input_p, keys_input_length, keys_input_time_t);
+		if(is_keys_checked ==true)
+		{
+		//记录密码
+			//组织密码结构体
+			memset(&key_store_struct_set, 0 , sizeof(struct key_store_struct));
+			//写密码
+			memcpy(&key_store_struct_set.key_store, keys_input_p, 6);
+			//写有效时间
+			key_store_struct_set.key_use_time = (uint16_t)KEY_INPUT_USE_TIME*10;
+			//写控制字
+			key_store_struct_set.control_bits = 0;
+			//写版本号
+			key_store_struct_set.key_vesion = 0;
+			//写存入时间
+			memcpy(&key_store_struct_set.key_store_time, &keys_input_time_t, sizeof(time_t));
+			//直接将钥匙记录到flash
+			key_store_write(&key_store_struct_set);
 		}
 	}
 	return is_keys_checked;
@@ -466,12 +437,41 @@ static void check_key_express(char express_value) {
 
 }
 
+/************************************
+*用户解绑操作
+************************************/
+static void nrst_all(void){
+	
+	//1、清除内部flash所有数据
+	for(int j=0; j < BLOCK_STORE_COUNT; j++) {
+		pstorage_block_identifier_get(&block_id_flash_store, \
+		                              (pstorage_size_t)j, &block_id_write);
+
+		pstorage_clear(&block_id_write, BLOCK_STORE_SIZE);
+
+	}
+
+	//2、清除指纹内所有存储指纹
+	//2.1、打开指纹模块电源
+	nrf_gpio_pin_set(BATTERY_LEVEL_EN);
+	//上电需要0.5s的准备时间
+	nrf_delay_ms(1000);
+	//2.2、发送删除指令
+	fig_r301t_send_cmd(0x01, sizeof(r301t_send_empty_cmd), r301t_send_empty_cmd);
+	//2.3、获取指令码,此指令码需要在回复命令处理中使用
+	fig_cmd_code = r301t_send_empty_cmd[0];
+	//3、获取指令码
+	ble_operate_code = USER_UNBIND_CMD;
+
+}
+
 /**************************************************************
 *触摸屏中断和指纹中断处理函数
 *in：	event_pins_low_to_high	状态由低到高的引脚
 *		event_pins_high_to_low	状态由高到低的引脚
 **************************************************************/
 static void touch_finger_int_handler(uint32_t event_pins_low_to_high, uint32_t event_pins_high_to_low) {
+	//触摸按键中断响应
 	if (event_pins_high_to_low & (1 << TOUCH_IIC_INT_PIN)) {
 		//触摸中断由高变低
 		//	key_express_value = (char)tsm12_key_read();
@@ -481,6 +481,7 @@ static void touch_finger_int_handler(uint32_t event_pins_low_to_high, uint32_t e
 		}
 		is_key_value_get = false;
 	}
+	//指纹中断响应
 	if (event_pins_high_to_low & (1 << FIG_WAKE_N_PIN)) {
 		/*//指纹中断由高变低,自动化过程，判断如果不是上位机设置的注册模式，发送自动搜索
 		if(  is_fm260b_autoenroll == false )
@@ -503,6 +504,10 @@ static void touch_finger_int_handler(uint32_t event_pins_low_to_high, uint32_t e
 			                   r301t_send_getimg_cmd);
 		}
 	}
+	//初始化按键中断响应
+	if (event_pins_high_to_low & (1 << NRST_IN)) {
+		nrst_all();
+	}
 
 }
 
@@ -519,11 +524,12 @@ void touch_finger_int_init(void) {
 	clear_key_expressed();
 
 	uint32_t   low_to_high_bitmask = 0x00000000;
-	uint32_t   high_to_low_bitmask = (1 << TOUCH_IIC_INT_PIN) | (1 << FIG_WAKE_N_PIN);
+	uint32_t   high_to_low_bitmask = (1 << TOUCH_IIC_INT_PIN) | (1 << FIG_WAKE_N_PIN) | (1 <<NRST_IN);
 
-	// Configure IIC_INT_PIN、FIG_WAKE_N_PIN   with SENSE enabled
+	// Configure IIC_INT_PIN、FIG_WAKE_N_PIN、NRST_IN   with SENSE enabled
 	nrf_gpio_cfg_sense_input(TOUCH_IIC_INT_PIN, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
 	nrf_gpio_cfg_sense_input(FIG_WAKE_N_PIN, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
+	nrf_gpio_cfg_sense_input(NRST_IN, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
 
 	APP_GPIOTE_INIT(APP_GPIOTE_MAX_USERS);
 

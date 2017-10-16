@@ -275,6 +275,8 @@ static void on_ble_evt(ble_evt_t * p_ble_evt) {
 		dm_device_delete_all(&m_app_handle);
 		//断开时，设置超级密码验证状态为失败
 		is_superkey_checked = false;
+		//继续广播
+		ble_advertising_start(BLE_ADV_MODE_FAST);
 		break;
 
 	case BLE_GAP_EVT_AUTH_STATUS:
