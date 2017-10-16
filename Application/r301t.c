@@ -121,6 +121,7 @@ static void send_fig_r301t_reply_data(void) {
 *指纹模块的应答处理
 *********************************************/
 int fig_r301t_reply_check(void) {
+	int err_code;
 	uint8_t	r301t_send_storechar_idx_cmd[4];
 	uint8_t fig_input[6];
 
@@ -136,11 +137,11 @@ int fig_r301t_reply_check(void) {
 		//判断结果码
 		if(fig_recieve_data[9] ==0x00) {
 			//成功将设置指纹信息函数存储在内部flash
-			fig_info_write(&fig_info_set);
-			nus_data_send[1] = enroll_fig_id[0];
-			nus_data_send[2] = enroll_fig_id[1];
-			nus_data_send_length = 3;
-			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+			err_code = fig_info_write(&fig_info_set);
+				nus_data_send[1] = enroll_fig_id[0];
+				nus_data_send[2] = enroll_fig_id[1];
+				nus_data_send_length = 3;
+				ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 			
 		} else {
 			nus_data_send[1] = 0x01;

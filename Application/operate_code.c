@@ -637,7 +637,7 @@ static int enroll_fig(uint8_t *p_data, uint16_t length) {
 		                              (pstorage_size_t)(FIG_INFO_OFFSET+i), &block_id_fig_info);
 		memset(&fig_info_get, 0, sizeof(struct fig_info));
 		pstorage_load((uint8_t *)&fig_info_get, &block_id_fig_info, sizeof(struct fig_info), 0);
-		if(fig_info_get.is_store ==0xffffffff) {
+		if(fig_info_get.is_store ==0xff) {
 			//1.1.1、未存储，获取要存储的id号
 			empty_1st_id = i;
 			//跳转执行存储
@@ -687,22 +687,7 @@ static int delete_fig(uint8_t *p_data, uint16_t length) {
 //	uint16_t marry_fig_id;//匹配的指纹id
 	uint8_t reply_data[1];
 	uint8_t r301t_send_deletechar_idx_cmd[5];
-	//1、获取指纹ID号
-	//读取flash中
-/*	for(int i = 0; i < FIG_INFO_NUMBER; i++) {
-		//1.1、获取内部flash存储区的信息
-		pstorage_block_identifier_get(&block_id_flash_store, \
-		                              (pstorage_size_t)(FIG_INFO_OFFSET+i), &block_id_fig_info);
-		memset(&fig_info_get, 0, sizeof(struct fig_info));
-		pstorage_load((uint8_t *)&fig_info_get, &block_id_fig_info, sizeof(struct fig_info), 0);
-
-		if(strncmp(fig_info_get.fig_info_data, (char *)&p_data[1], 4) == 0) {
-			//1.1.1、未存储，获取要存储的id号
-			marry_fig_id = i;
-			//跳转执行存储
-			goto exe_delete_fig;
-		}
-	}*/
+	
 	pstorage_block_identifier_get(&block_id_flash_store, \
 		                              (pstorage_size_t)(FIG_INFO_OFFSET+(p_data[1]*0x100 + p_data[2])), &block_id_fig_info);
 	memset(&fig_info_get, 0, sizeof(struct fig_info));
@@ -722,8 +707,6 @@ exe_delete_fig:
 
 	//设置删除的指纹ID，大端字节
 	memset(delete_fig_id, 0, 2);
-//	delete_fig_id[0] = marry_fig_id / 0x100;
-//	delete_fig_id[1] = marry_fig_id & 0xff;
 	memcpy(delete_fig_id, &p_data[1], 2);
 
 	//2、打开指纹模块电源
@@ -756,8 +739,9 @@ static int get_fig_info(uint8_t *p_data, uint16_t length) {
 		//1.1、获取内部flash存储区的信息
 		pstorage_block_identifier_get(&block_id_flash_store, \
 		                              (pstorage_size_t)(FIG_INFO_OFFSET+i), &block_id_fig_info);
+		pstorage_load(interflash_read_data, &block_id_fig_info, BLOCK_STORE_SIZE, 0);
 		memset(&fig_info_get, 0, sizeof(struct fig_info));
-		pstorage_load((uint8_t *)&fig_info_get, &block_id_fig_info, sizeof(struct fig_info), 0);
+		memcpy(&fig_info_get, interflash_read_data, sizeof(struct fig_info));
 
 		if(fig_info_get.is_store == 'w') {
 			//写了指纹信息,将指令码+40，再把指纹信息返回给上位机
