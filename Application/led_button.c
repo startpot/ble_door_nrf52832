@@ -204,32 +204,19 @@ bool keys_input_check_normal_keys(char *keys_input_p, uint8_t keys_input_length,
 	memcpy(keys_input_check, keys_input_p, keys_input_length);
 	keys_input_check[keys_input_length + 1] = '\0';
 
-	//普通密码
-	//获取普通密码的个数,小端字节
-	interflash_read(flash_read_data, BLOCK_STORE_SIZE, KEY_STORE_OFFSET);
-	memcpy(&key_store_length,flash_read_data, sizeof(struct key_store_length_struct));
-
-	if(key_store_length.key_store_full ==0x1) {
-		//存储已满
-		key_store_length_get = KEY_STORE_NUMBER;
-	} else {
-		//存储未满
-		key_store_length_get = key_store_length.key_store_length;
-	}
-
-	//密码数量不为0，进行存储密码的对比
-	if(key_store_length_get >0) {
-		for(int i=0; i<key_store_length_get; i++) {
-			//获取存储的密码
-			interflash_read((uint8_t *)&key_store_get, sizeof(struct key_store_struct), \
-			                (KEY_STORE_OFFSET + 1 + i));
+	//循环对比以存储的密码
+	for(int i=0; i < KEY_STORE_NUMBER; i++) {
+		//获取存储的密码
+		interflash_read((uint8_t *)&key_store_get, sizeof(struct key_store_struct), \
+			                (KEY_STORE_OFFSET + i));
+		if(key_store_get.is_store == 'w'){
 			memset(normal_keys_store, 0, 7);
 			memcpy(normal_keys_store, key_store_get.key_store, 6);
 			normal_keys_store[6] = '\0';
 			//对比密码是否一致
 			if( ( strstr(keys_input_check, normal_keys_store) != NULL ) &&\
-				 (( (double)my_difftime(keys_input_time_t, key_store_get.key_store_time) < (double)key_store_get.key_use_time * 600) ||\
-					key_store_get.key_use_time ==0xffffffff )) {
+					(( (double)my_difftime(keys_input_time_t, key_store_get.key_store_time) < (double)key_store_get.key_use_time * 600) ||\
+					key_store_get.key_use_time ==0xffff )) {
 				//密码相同，且在有效时间内
 				memcpy(key_marry, normal_keys_store, KEY_LENGTH);
 				//密码为真

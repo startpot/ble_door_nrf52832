@@ -34,7 +34,7 @@ struct tm					time_get;
 time_t						time_get_t;
 
 uint32_t					record_length_get;
-uint32_t					key_store_length_get;
+
 //设置触摸屏密码
 struct key_store_struct key_store_set;
 struct key_store_struct key_store_get;
@@ -90,10 +90,119 @@ static int sm4_key_check_open(uint8_t *p_data, uint16_t length) {
 
 }
 
+/**********************************************************************
+*设置管理员密码，如果是第一次设置，直接通过，返回设置成功
+*如果不是第一次设置，则需要通过管理员密码的验证，通过的话，返回设置成功
+*没有通过验证的话，返回设置失败
+***********************************************************************/
+static int set_super_key(uint8_t *p_data, uint16_t length) {
+	//1读取超级管理员存储区内容
+	interflash_read(flash_read_data, BLOCK_STORE_SIZE, SUPER_KEY_OFFSET);
+
+	if( flash_read_data[0] != 'w' ) {
+		//没有有管理员密码，直接存储
+		memset(flash_write_data, 0, BLOCK_STORE_SIZE);
+		flash_write_data[0] = 'w';//'w'
+		memcpy(&flash_write_data[1],&p_data[1], SUPER_KEY_LENGTH);
+		//超级密码就12位，取写入数据前面16位(16>(1+12))
+		write_super_key(flash_write_data,SUPER_KEY_LENGTH +1);
+
+		//将命令加上0x40,返回给app
+		nus_data_send[0] = p_data[0] + 0x40;
+		nus_data_send[1] = 0x00;
+		nus_data_send_length = 2;
+		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+
+	} else {
+		//是不是跟原来密码一致
+		//取存储的超级管理员密码
+		memset(super_key, 0, sizeof(super_key));
+		memcpy(super_key, &flash_read_data[1],sizeof(super_key));
+		//1、对比管理员密码是否相同
+		if(strncasecmp((char *)&p_data[1],super_key, SUPER_KEY_LENGTH) == 0) {
+			//将命令加上0x40,返回给app
+			nus_data_send[0] = p_data[0] + 0x40;
+			nus_data_send[1] = 0x00;
+			nus_data_send_length = 2;
+			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+			return 0;
+		}
+
+		if(is_superkey_checked == true) {
+			//存在管理员密码，但是验证了管理员密码，属于修改密码
+			memset(flash_write_data, 0, BLOCK_STORE_SIZE);
+			memcpy(&flash_write_data[1],&p_data[1], SUPER_KEY_LENGTH);
+			flash_write_data[0] = 'w';//'w'
+			//超级密码就12位，取写入数据前面16位(16>(1+12))
+			write_super_key(flash_write_data,SUPER_KEY_LENGTH + 1);
+
+			//将命令加上0x40,返回给app
+			nus_data_send[0] = p_data[0] + 0x40;
+			nus_data_send[1] = 0x00;
+			nus_data_send_length = 2;
+			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+			return 0;
+		}
+
+		//已经有管理员密码了,且没有验证管理员密码或者与原密码不一致
+
+		//将命令加上0x40,返回给app
+		nus_data_send[0] = p_data[0] + 0x40;
+		nus_data_send[1] = 0x01;
+		nus_data_send_length = 2;
+		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+	}
+	return 0;
+}
+
+/*******************************************
+*验证超级管理员密码,验证通过则返回
+*(命令码+0x40)+超级管理员密码
+*验证失败，返回：没有设置管理员密码
+*			或者验证失败
+*******************************************/
+static void check_super_key(uint8_t *p_data, uint16_t length) {
+	//1、从flash中读取超级管理员密码
+	interflash_read(flash_read_data, 16, SUPER_KEY_OFFSET);
+	if(flash_read_data[0] == 'w') {
+		//设置了超级管理员密码
+		memset(super_key, 0, 12);
+		memcpy(super_key, &flash_read_data[1],12);
+		//2、对比管理员密码是否相同
+		if(strncasecmp((char *)&p_data[1],super_key, SUPER_KEY_LENGTH) == 0) {
+#if defined(BLE_DOOR_DEBUG)
+			printf("spuer key checked\r\n");
+#endif
+			is_superkey_checked = true;
+
+			//将命令加上0x40,返回给app
+			nus_data_send[0] = p_data[0] + 0x40;
+			nus_data_send[1] = 0x00;
+			nus_data_send_length = 2;
+			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+		} else {
+
+			//将命令加上0x40,返回给app
+			nus_data_send[0] = p_data[0] + 0x40;
+			nus_data_send[1] = 0x01;
+			nus_data_send_length = 2;
+			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+		}
+	} else {
+		//未设置管理员密码
+
+		//将命令加上0x40,返回给app
+		nus_data_send[0] = p_data[0] + 0x40;
+		nus_data_send[1] = 0x02;
+		nus_data_send_length = 2;
+		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+	}
+
+}
+
 /**********************************************
 *同步时间命令，成功返回(命令码+0x40)+设置的时间
 ***********************************************/
-
 static void sync_rtc_time(uint8_t *p_data, uint16_t length) {
 	uint32_t err_code;
 	if(is_superkey_checked == true) { //如果验证了超级密码
@@ -289,7 +398,7 @@ static void get_mac(uint8_t *p_data, uint16_t length) {
 		//将命令加上0x40,返回给app
 		nus_data_send[0] = p_data[0] + 0x40;
 		memcpy(&nus_data_send[1], &addr.addr[0], 6);
-		nus_data_send_length = 6;
+		nus_data_send_length = 7;
 		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 	} else {
 		//将命令加上0x40,返回给app
@@ -312,151 +421,6 @@ static void get_battery_level(uint8_t *p_data, uint16_t length) {
 	memcpy(&nus_data_send[1], &tmp, 1);
 	nus_data_send_length = 2;
 	ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
-
-}
-
-
-/**********************************************************************
-*设置管理员密码，如果是第一次设置，直接通过，返回设置成功
-*如果不是第一次设置，则需要通过管理员密码的验证，通过的话，返回设置成功
-*没有通过验证的话，返回设置失败
-***********************************************************************/
-static int set_super_key(uint8_t *p_data, uint16_t length) {
-	//1读取超级管理员存储区内容
-	interflash_read(flash_read_data, BLOCK_STORE_SIZE, SUPER_KEY_OFFSET);
-
-	if( flash_read_data[0] != 'w' ) {
-		//没有有管理员密码，直接存储
-		memset(flash_write_data, 0, BLOCK_STORE_SIZE);
-		flash_write_data[0] = 'w';//'w'
-		memcpy(&flash_write_data[1],&p_data[1], SUPER_KEY_LENGTH);
-		//超级密码就12位，取写入数据前面16位(16>(1+12))
-		write_super_key(flash_write_data,SUPER_KEY_LENGTH +1);
-
-		//将命令加上0x40,返回给app
-		nus_data_send[0] = p_data[0] + 0x40;
-		nus_data_send[1] = 0x00;
-		nus_data_send_length = 2;
-		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
-
-	} else {
-		//是不是跟原来密码一致
-		//取存储的超级管理员密码
-		memset(super_key, 0, sizeof(super_key));
-		memcpy(super_key, &flash_read_data[1],sizeof(super_key));
-		//1、对比管理员密码是否相同
-		if(strncasecmp((char *)&p_data[1],super_key, SUPER_KEY_LENGTH) == 0) {
-			//将命令加上0x40,返回给app
-			nus_data_send[0] = p_data[0] + 0x40;
-			nus_data_send[1] = 0x00;
-			nus_data_send_length = 2;
-			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
-			return 0;
-		}
-
-		if(is_superkey_checked == true) {
-			//存在管理员密码，但是验证了管理员密码，属于修改密码
-			memset(flash_write_data, 0, BLOCK_STORE_SIZE);
-			memcpy(&flash_write_data[1],&p_data[1], SUPER_KEY_LENGTH);
-			flash_write_data[0] = 'w';//'w'
-			//超级密码就12位，取写入数据前面16位(16>(1+12))
-			write_super_key(flash_write_data,SUPER_KEY_LENGTH + 1);
-
-			//将命令加上0x40,返回给app
-			nus_data_send[0] = p_data[0] + 0x40;
-			nus_data_send[1] = 0x00;
-			nus_data_send_length = 2;
-			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
-			return 0;
-		}
-
-		//已经有管理员密码了,且没有验证管理员密码或者与原密码不一致
-
-		//将命令加上0x40,返回给app
-		nus_data_send[0] = p_data[0] + 0x40;
-		nus_data_send[1] = 0x01;
-		nus_data_send_length = 2;
-		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
-	}
-	return 0;
-}
-
-/*******************************************
-*验证超级管理员密码,验证通过则返回
-*(命令码+0x40)+超级管理员密码
-*验证失败，返回：没有设置管理员密码
-*			或者验证失败
-*******************************************/
-static void check_super_key(uint8_t *p_data, uint16_t length) {
-	//1、从flash中读取超级管理员密码
-	interflash_read(flash_read_data, 16, SUPER_KEY_OFFSET);
-	if(flash_read_data[0] == 'w') {
-		//设置了超级管理员密码
-		memset(super_key, 0, 12);
-		memcpy(super_key, &flash_read_data[1],12);
-		//2、对比管理员密码是否相同
-		if(strncasecmp((char *)&p_data[1],super_key, SUPER_KEY_LENGTH) == 0) {
-#if defined(BLE_DOOR_DEBUG)
-			printf("spuer key checked\r\n");
-#endif
-			is_superkey_checked = true;
-
-			//将命令加上0x40,返回给app
-			nus_data_send[0] = p_data[0] + 0x40;
-			nus_data_send[1] = 0x00;
-			nus_data_send_length = 2;
-			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
-		} else {
-
-			//将命令加上0x40,返回给app
-			nus_data_send[0] = p_data[0] + 0x40;
-			nus_data_send[1] = 0x01;
-			nus_data_send_length = 2;
-			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
-		}
-	} else {
-		//未设置管理员密码
-
-		//将命令加上0x40,返回给app
-		nus_data_send[0] = p_data[0] + 0x40;
-		nus_data_send[1] = 0x02;
-		nus_data_send_length = 2;
-		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
-	}
-
-}
-
-/*****************************************
-*获取现在存储的密码
-******************************************/
-static void get_used_key(uint8_t *p_data, uint16_t length) {
-	memset(nus_data_send, 0, BLE_NUS_MAX_DATA_LEN);
-	//获取密码的数量，小端字节
-	interflash_read(flash_read_data, BLOCK_STORE_SIZE, KEY_STORE_OFFSET);
-	memcpy(&key_store_length, flash_read_data, sizeof(struct key_store_length_struct));
-
-	key_store_length_get = key_store_length.key_store_length;
-
-	nus_data_send[0] = p_data[0] + 0x40;
-	if(key_store_length_get ==0) {
-		nus_data_send[1] = 0;
-		nus_data_send_length = 2;
-		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
-	} else {
-		if( key_store_length.key_store_full ==0x1 ) {
-			//记录满
-			nus_data_send[1] = (uint8_t)KEY_STORE_NUMBER;
-		} else if(key_store_length.key_store_length >0 &&key_store_length.key_store_full ==0x0) {
-			nus_data_send[1] = (uint8_t)key_store_length.key_store_length;
-		}
-		for(int i=0; i<nus_data_send[1]; i++) {
-			nus_data_send[2] = (uint8_t)i;
-			interflash_read(flash_read_data, BLOCK_STORE_SIZE, \
-			                (KEY_STORE_OFFSET+1+i));
-			memcpy(&nus_data_send[3], flash_read_data, sizeof(struct key_store_struct));
-			ble_nus_string_send(&m_nus, nus_data_send, sizeof(struct key_store_struct)+3);
-		}
-	}
 
 }
 
@@ -547,32 +511,116 @@ static void get_recent_record(uint8_t *p_data, uint16_t length) {
 /**************************************
 *设置键盘密码
 ***************************************/
-static void set_touch_key(uint8_t *p_data, uint16_t length)
+static int set_touch_key(uint8_t *p_data, uint16_t length)
 {
 	int err_code;
+	uint16_t store_site;
 	//1、设置获取的时间
 	err_code = rtc_time_read(&time_get);
 	if(err_code == NRF_SUCCESS) {
 		time_get_t = my_mktime(&time_get);
 	}
-	//2、设置获取的格式，并存储
+	//2、设置获取的格式
 	//设置的密码
 	memset(&key_store_set, 0, sizeof(struct key_store_struct));
+	//2.1、写标志位'w'
+	key_store_set.is_store = 'w';
 	memcpy(key_store_set.key_store, &p_data[1], sizeof(key_store_set.key_store));
 	memcpy(&key_store_set.key_use_time, &p_data[1 + sizeof(key_store_set.key_store)], \
 					sizeof(key_store_set.key_use_time));
-	memcpy(&key_store_set.control_bits, &p_data[1 + sizeof(key_store_set.key_store) + sizeof(key_store_set.key_use_time)], \
-					sizeof(key_store_set.control_bits));
-	memcpy(&key_store_set.key_version, &p_data[1 + sizeof(key_store_set.key_store) + sizeof(key_store_set.key_use_time) + sizeof(key_store_set.control_bits)], \
-					sizeof(key_store_set.key_version));
 	memcpy(&key_store_set.key_store_time,&time_get_t, \
 					sizeof(key_store_set.key_store_time));
-	key_store_write(&key_store_set);
-	//3、返回包
+	//3、存储密码
+	//3、1寻找存储的位置
+	for(int i = 0; i < KEY_STORE_NUMBER; i++){
+		interflash_read((uint8_t *)&key_store_get, sizeof(struct key_store_struct), (pstorage_size_t)(KEY_STORE_OFFSET + i));
+		if(key_store_get.is_store != 'w')
+		{
+			store_site = i;
+			goto touch_key_store;
+		}	
+	}
+touch_key_store:
+	key_store_write(&key_store_set, store_site);
+	//4、返回包
 	nus_data_send[0] = p_data[0] + 0x40;
 	nus_data_send[1] = 0x00;
-	nus_data_send_length  = 2;
+	nus_data_send[2] = store_site/0x100;
+	nus_data_send[3] = store_site &0xff;
+	nus_data_send_length  = 4;
 	ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+	return 0;
+	
+	//都没有，记录满
+	nus_data_send[0] = p_data[0] + 0x40;
+	nus_data_send[1] = 0x01;
+	nus_data_send[2] = 0xff;
+	nus_data_send[3] = 0xff;
+	nus_data_send_length  = 4;
+	ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+	return 0;
+}
+
+/************************************
+*删除键盘密码
+************************************/
+static void delete_touch_key(uint8_t *p_data, uint16_t length){
+	uint16_t delete_site;//删除的位置
+	//1、获取要删除的ID号
+	delete_site = p_data[1] * 0x100 + p_data[2];
+	//2、读取指定的ID号的键盘密码内容
+	interflash_read((uint8_t *)&key_store_get, sizeof(struct key_store_struct), (pstorage_size_t)(KEY_STORE_OFFSET + delete_site));
+	//3、判断密码是否存在，存在的话，删除
+	if(key_store_get.is_store =='w'){
+		//获取需要存储的位置
+		pstorage_block_identifier_get(&block_id_flash_store, (pstorage_size_t)(KEY_STORE_OFFSET + delete_site), &block_id_read);
+		//清除当前存储区域
+		pstorage_clear(&block_id_read, BLOCK_STORE_SIZE);
+	}
+	//4、返回包
+	nus_data_send[0] = p_data[0] + 0x40;
+	nus_data_send[1] = 0x00;
+	nus_data_send_length = 2;
+	ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+}
+
+/*****************************************
+*获取现在存储的密码
+******************************************/
+static void get_touch_key_store(uint8_t *p_data, uint16_t length) {
+	
+	memset(nus_data_send, 0, BLE_NUS_MAX_DATA_LEN);
+	
+	for(int i = 0; i < KEY_STORE_NUMBER; i++) {
+		interflash_read((uint8_t *)&key_store_get, sizeof(struct key_store_struct), (pstorage_size_t)(KEY_STORE_OFFSET + i));
+		if(key_store_get.is_store == 'w'){
+			nus_data_send[0] = p_data[0] + 0x40;
+			nus_data_send[1] = i/0x100;
+			nus_data_send[2] = i&0xff;
+			//密码
+			memcpy(&nus_data_send[3], \
+				key_store_get.key_store, sizeof(key_store_get.key_store));
+			//有效时间
+			memcpy(&nus_data_send[3 + sizeof(key_store_get.key_store)], \
+				&key_store_get.key_use_time, sizeof(key_store_get.key_use_time));
+			//存储时间
+			memcpy(&nus_data_send[3 + sizeof(key_store_get.key_store) + sizeof(key_store_get.key_use_time)], \
+				&key_store_get.key_store_time, sizeof(key_store_get.key_store_time));
+			nus_data_send_length = 3 + sizeof(key_store_get.key_store) + \
+										sizeof(key_store_get.key_use_time) + \
+										sizeof(key_store_get.key_store_time);
+			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+		}
+	}
+	//结束包
+	nus_data_send[0] = p_data[0] + 0x40;
+	nus_data_send[1] = 0x00;
+	nus_data_send[2] = 0x00;
+	nus_data_send[3] = 0x00;
+	nus_data_send[4] = 0x00;
+	nus_data_send_length = 5;
+	ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+	
 }
 
 /*************************************
@@ -832,6 +880,18 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 			}
 		}
 		break;
+	
+	case SET_SUPER_KEY://设置管理员密码
+		if(length == 0x0d) { //13字节
+			set_super_key(p_data, length);
+		}
+		break;
+
+	case CHECK_SUPER_KEY://验证超级管理员密码
+		if(length == 0x0d) {
+			check_super_key(p_data,length);
+		}
+		break;
 
 	case SYNC_TIME://同步时间
 		if(length ==0x08) { //8字节
@@ -848,6 +908,18 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 	case GET_TIME://获取时间
 		get_rtc_time(p_data, length);
 		break;
+	
+	case SET_KEY_SEED://写入种子
+		if(length == 0x11) { //17字节
+			if(is_superkey_checked == true) { //如果验证了超级密码
+				set_key_seed(p_data, length);
+			} else {
+				//向手机发送失败信息"skey check fail"
+				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+				                    strlen(checked_superkey_false) );
+			}
+		}
+		break;
 
 	case GET_KEY_NOW://获取现在的动态密码，后期要注释掉
 		get_key_now(p_data, length);
@@ -857,18 +929,6 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 		if(length == 0x7) { //6字节
 			if(is_superkey_checked == true) { //如果验证了超级密码
 				set_param(p_data, length);
-			} else {
-				//向手机发送失败信息"skey check fail"
-				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
-				                    strlen(checked_superkey_false) );
-			}
-		}
-		break;
-
-	case SET_KEY_SEED://写入种子
-		if(length == 0x11) { //17字节
-			if(is_superkey_checked == true) { //如果验证了超级密码
-				set_key_seed(p_data, length);
 			} else {
 				//向手机发送失败信息"skey check fail"
 				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
@@ -891,28 +951,6 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 		get_battery_level(p_data, length);
 		break;
 
-	case SET_SUPER_KEY://设置管理员密码
-		if(length == 0x0d) { //13字节
-			set_super_key(p_data, length);
-		}
-		break;
-
-	case CHECK_SUPER_KEY://验证超级管理员密码
-		if(length == 0x0d) {
-			check_super_key(p_data,length);
-		}
-		break;
-
-	case GET_USED_KEY://查询有效密码
-		if(is_superkey_checked == true) { //如果验证了超级密码
-			get_used_key(p_data, length);
-		} else {
-			//向手机发送失败信息"skey check fail"
-			ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
-			                    strlen(checked_superkey_false) );
-		}
-		break;
-
 	case GET_RECORD_NUMBER://查询开门记录数量
 		get_record_number(p_data, length);
 		break;
@@ -930,7 +968,7 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 		break;
 		
 	case SET_TOUCH_KEY://设置触摸按键密码
-		if(length == 11){//11字节
+		if(length == 9){//9字节
 			if(is_superkey_checked == true) { //如果验证了超级密码
 				set_touch_key(p_data, length);
 			} else {
@@ -942,7 +980,29 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 		}
 		break;
 		
-
+	case DELETE_TOUCH_KEY://设置触摸按键密码
+		if(length == 3){//11字节
+			if(is_superkey_checked == true) { //如果验证了超级密码
+				delete_touch_key(p_data, length);
+			} else {
+				//向手机发送失败信息"skey check fail"
+				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+				                    strlen(checked_superkey_false) );
+			}
+		
+		}
+		break;	
+	
+	case GET_TOUCH_KEY_STORE://查询有效密码
+		if(is_superkey_checked == true) { //如果验证了超级密码
+			get_touch_key_store(p_data, length);
+		} else {
+			//向手机发送失败信息"skey check fail"
+			ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+			                    strlen(checked_superkey_false) );
+		}
+		break;
+		
 	case USER_UNBIND_CMD: //用户解除绑定
 		if(is_superkey_checked == true) { //如果验证了超级密码
 			user_unbind_cmd(p_data, length);
@@ -950,18 +1010,6 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 			//向手机发送失败信息"skey check fail"
 			ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
 			                    strlen(checked_superkey_false) );
-		}
-		break;
-
-	case 0x1B://指纹模块fm260b指令，长度为8，直接通过串口发送给模块
-		if(length == 8) { //长度为8
-			if(is_superkey_checked == true) { //如果验证了超级密码
-				send_fig_fm260b_cmd(p_data, length);
-			} else {
-				//向手机发送失败信息"skey check fail"
-				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
-				                    strlen(checked_superkey_false) );
-			}
 		}
 		break;
 
@@ -1016,6 +1064,18 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 			//向手机发送失败信息"skey check fail"
 			ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
 			                    strlen(checked_superkey_false) );
+		}
+		break;
+		
+	case 0x1B://指纹模块fm260b指令，长度为8，直接通过串口发送给模块
+		if(length == 8) { //长度为8
+			if(is_superkey_checked == true) { //如果验证了超级密码
+				send_fig_fm260b_cmd(p_data, length);
+			} else {
+				//向手机发送失败信息"skey check fail"
+				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+				                    strlen(checked_superkey_false) );
+			}
 		}
 		break;
 

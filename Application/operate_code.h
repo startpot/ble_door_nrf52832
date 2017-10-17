@@ -26,7 +26,6 @@ extern struct key_store_struct key_store_set;
 extern struct key_store_struct key_store_get;
 
 extern uint32_t				record_length_get;
-extern uint32_t				key_store_length_get;
 
 extern uint8_t				ble_operate_code;
 
@@ -45,37 +44,44 @@ extern uint8_t				delete_fig_id[2];
 ***********************************/
 #define OPERATE_CODE_BIT		0	//命令位，除去用户设置密码的命令
 
+//系统设置相关
+#define	SET_SUPER_KEY			0x80	//设置管理员密码
+#define CHECK_SUPER_KEY			0x81	//验证超级密码
 
-#define	SYNC_TIME				0x80
-#define	SET_PARAMS				0x81
-#define	SET_KEY_SEED			0x82
-#define	SET_MAC					0x83
-#define	SET_BLE_UUID			0x84
-#define	SET_SUPER_KEY			0x85	//设置管理员密码
-#define GET_TIME				0x86
-#define	GET_USED_KEY			0x88
-#define	GET_RECORD_NUMBER		0x89
-#define	GET_RECENT_RECORD		0x8A
-#define GET_MAC					0x8B	//返回mac
-#define GET_BATTERY_LEVEL		0x8C	//返回电池电量
-#define SET_TOUCH_KEY			0x8D	//设置触摸屏密码
+#define	SYNC_TIME				0x82	//对时
+#define	SET_KEY_SEED			0x83	//设置种子
 
-#define USER_UNBIND_CMD			0x8E	//用户解除绑定
+#define	SET_MAC					0x84	//设置mac
+#define GET_MAC					0x85	//获取mac
 
-#define CHECK_SUPER_KEY			0x8F	//验证超级密码
-
+#define	SET_PARAMS				0x86	//设置工作参数
 
 #define	GET_KEY_NOW				0x87	//TODO 后期移除
 
+#define GET_TIME				0x88	//获取时间
 
-#define ENROLL_FIG				0x70	//注册指纹
-#define DELETE_FIG				0x71	//删除指纹
-#define SEARCH_FIG				0x72	//搜素指纹
-#define GET_FIG_INFO			0x73	//获取指纹信息
-#define STOP_FIG				0x74	//停止指纹模块
-#define DELETE_ALL_FIG			0x75	//删除所有指纹
+#define GET_BATTERY_LEVEL		0x8C	//返回电池电量
+
+#define USER_UNBIND_CMD			0x8F	//用户解除绑定
 
 
+//触摸按键相关
+#define SET_TOUCH_KEY			0x90	//设置触摸屏密码
+#define DELETE_TOUCH_KEY		0x91	//删除触摸屏密码
+#define	GET_TOUCH_KEY_STORE		0x92	//查询设置的键盘密码
+
+//开门记录相关
+#define	GET_RECORD_NUMBER		0x9A	//获取记录数量
+#define	GET_RECENT_RECORD		0x9B	//获取最近的记录
+
+
+//指纹模块相关
+#define ENROLL_FIG				0xA0	//注册指纹
+#define DELETE_FIG				0xA1	//删除指纹
+#define SEARCH_FIG				0xA2	//搜素指纹
+#define GET_FIG_INFO			0xA3	//获取指纹信息
+#define STOP_FIG				0xA4	//停止指纹模块
+#define DELETE_ALL_FIG			0xA5	//删除所有指纹
 
 
 void ble_reply(uint8_t operate_code, uint8_t *reply_code, uint16_t reply_code_length);

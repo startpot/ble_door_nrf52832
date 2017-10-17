@@ -22,7 +22,6 @@ pstorage_handle_t		block_id_key_store;
 pstorage_handle_t		block_id_record;
 pstorage_handle_t		block_id_fig_info;
 
-struct key_store_length_struct		key_store_length;
 struct record_length_struct			record_length;
 
 struct key_store_struct				key_store_struct_set;
@@ -30,10 +29,6 @@ struct door_open_record				door_open_record_get;
 
 struct fig_info	fig_info_set; //设置的指纹信息
 struct fig_info	fig_info_get; //获取的指纹信息
-
-
-bool	key_store_length_setted;
-bool 	record_length_setted;
 
 uint8_t					interflash_write_data[BLOCK_STORE_SIZE];
 uint8_t					interflash_read_data[BLOCK_STORE_SIZE];
@@ -94,10 +89,6 @@ static void my_cb(pstorage_block_t *handle, uint8_t op_code, \
 void flash_init(void) {
 	uint32_t err_code;
 
-	//初始化标志量
-	key_store_length_setted =false;
-	record_length_setted = false;
-
 	//	pstorage_init(); //初始化flash操作,在device_manager_init中初始化了，这里就不用了
 
 	//初始化key_store的空间
@@ -128,25 +119,6 @@ void flash_init(void) {
 		err_code = pstorage_load(device_name,&block_id_device_name,DEVICE_NAME_SIZE,0);
 		APP_ERROR_CHECK(err_code);
 	*/
-	//如果钥匙记录为全f，则写钥匙记录条数为0
-	err_code = pstorage_block_identifier_get(&block_id_flash_store, \
-	           (pstorage_size_t)KEY_STORE_OFFSET, &block_id_key_store);
-	APP_ERROR_CHECK(err_code);
-	err_code = pstorage_load((uint8_t *)&key_store_length, &block_id_key_store, sizeof(struct key_store_length_struct), 0);
-	if(err_code == NRF_SUCCESS) {
-		if(key_store_length.key_store_length == 0xffffffff) {
-			key_store_length.key_store_length = 0x0;
-			key_store_length.key_store_full = 0x0;
-			err_code = pstorage_clear(&block_id_key_store,BLOCK_STORE_SIZE);
-			APP_ERROR_CHECK(err_code);
-			err_code = pstorage_store(&block_id_key_store, (uint8_t *)&key_store_length, sizeof(struct key_store_length_struct), 0);
-			APP_ERROR_CHECK(err_code);
-		}
-		key_store_length_setted = true;
-#if defined(BLE_DOOR_DEBUG)
-		printf("key_store length set %d\r\n", key_store_length.key_store_length);
-#endif
-	}
 	//如果开门记录的条数为全f，写开门记录条数为0
 	err_code = pstorage_block_identifier_get(&block_id_flash_store, \
 	           (pstorage_size_t)RECORD_OFFSET, &block_id_record);
@@ -161,15 +133,12 @@ void flash_init(void) {
 			err_code = pstorage_store(&block_id_record, (uint8_t *)&record_length, sizeof(struct record_length_struct), 0);
 			APP_ERROR_CHECK(err_code);
 		}
-		record_length_setted = true;
 #if defined(BLE_DOOR_DEBUG)
 		printf("record length set %d\r\n", record_length.record_length);
 #endif
 	}
 #if defined(BLE_DOOR_DEBUG)
-	if(key_store_length_setted && record_length_setted ==true) {
 		printf("flash init success \r\n");
-	}
 #endif
 
 }
@@ -307,29 +276,12 @@ int write_super_key(uint8_t *p_data, uint32_t data_len) {
 *key_store_input->control_bits =0x01,以前的记录清除
 *记录达到上限KEY_STORE_NUMBER，则循环记录
 **********************************************************************/
-void key_store_write(struct key_store_struct *key_store_input) {
-	//读出记录条数
-	pstorage_block_identifier_get(&block_id_flash_store, (pstorage_size_t)KEY_STORE_OFFSET, &block_id_key_store);
-	pstorage_load((uint8_t *)&key_store_length, &block_id_key_store, sizeof(struct key_store_length_struct), 0);
-	if( (key_store_input->control_bits&0x01) ==0x01 ) {
-		//control_bit=0x01
-		key_store_length.key_store_length = 0x1;
-		key_store_length.key_store_full =0x0;
-	} else if(key_store_length.key_store_length >= KEY_STORE_NUMBER) {
-		//达到记录上限
-		key_store_length.key_store_length = 0x1;
-		key_store_length.key_store_full = 0x1;
-	} else {
-		//未达到记录上限
-		key_store_length.key_store_length++;
-	}
-	pstorage_clear(&block_id_key_store, BLOCK_STORE_SIZE);
-	pstorage_store(&block_id_key_store, (uint8_t *)&key_store_length, sizeof(struct key_store_length_struct), 0);
+void key_store_write(struct key_store_struct *key_store_input, uint16_t key_store_site) {
 
 	memset(flash_write_key_store_data, 0, BLOCK_STORE_SIZE);
 	memcpy(flash_write_key_store_data,key_store_input, sizeof(struct key_store_struct));
 	interflash_write(flash_write_key_store_data, BLOCK_STORE_SIZE, \
-	                 (pstorage_size_t)(KEY_STORE_OFFSET + key_store_length.key_store_length));
+	                 (pstorage_size_t)(KEY_STORE_OFFSET + key_store_site));
 
 #if defined(BLE_DOOR_DEBUG)
 	printf("key set  success:");

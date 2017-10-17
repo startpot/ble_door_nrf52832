@@ -11,19 +11,12 @@
 
 
 #pragma pack(4)
-//存储钥匙长度
-struct key_store_length_struct {
-	uint32_t key_store_length;
-	uint32_t key_store_full;
-};
-
 
 //存储的键盘钥匙
 struct key_store_struct {
+	uint8_t		is_store;//'w'
 	uint8_t 	key_store[KEY_LENGTH];
 	uint16_t 	key_use_time;//有效时间，以10分钟为单位
-	uint8_t		control_bits;
-	uint8_t		key_version;
 	time_t		key_store_time;
 };
 
@@ -75,7 +68,7 @@ MAC_OFFSET (1)				-|-		MAC_NUMBER (1)
 SPUER_KEY_OFFSET (2)		-|-		SUPER_KEY_NUMBER (1)
 SEED_OFFSET (3)				-|-		SEED_NUMBER (1)
 DEVICE_NAME_OFFSET (4)		-|-		DEVICE_NAME_NUMBER (1)
-KEY_STORE_OFFSET (5)		-|-		KEY_STORE_LENGTH (1) + KEY_STORE_NUMBER (10)
+KEY_STORE_OFFSET (5)		-|-		KEY_STORE_NUMBER (10)
 RECORD_OFFSET (16)			-|-		RECORD_LENGTH (1) +  RECORD_NUMBER(30)
 FIG_INFO_OFFSET (47)		-|-		FP_STORE_NUMBER (32)
 **********************************************************************************/
@@ -104,10 +97,9 @@ FIG_INFO_OFFSET (47)		-|-		FP_STORE_NUMBER (32)
 #define DEVICE_NAME_NUMBER			1
 
 #define	KEY_STORE_OFFSET			DEVICE_NAME_OFFSET + DEVICE_NAME_NUMBER
-#define KEY_STORE_LENGTH			1	//第一个4字节表示条数，第二个字节表示是否满
 #define	KEY_STORE_NUMBER			10
 
-#define	RECORD_OFFSET				KEY_STORE_OFFSET + KEY_STORE_LENGTH + KEY_STORE_NUMBER
+#define	RECORD_OFFSET				KEY_STORE_OFFSET + KEY_STORE_NUMBER
 #define RECORD_LENGTH				1	//第一个4字节表示条数，第二个字节表示是否满
 #define	RECORD_NUMBER				30
 
@@ -117,7 +109,7 @@ FIG_INFO_OFFSET (47)		-|-		FP_STORE_NUMBER (32)
 
 #define BLOCK_STORE_COUNT			DEFAULT_PARAMS_NUMBER +MAC_NUMBER + SUPER_KEY_NUMBER + \
 									SEED_NUMBER + DEVICE_NAME_NUMBER + \
-									KEY_STORE_LENGTH + KEY_STORE_NUMBER + \
+									KEY_STORE_NUMBER + \
 									RECORD_LENGTH + RECORD_NUMBER + \
 									FIG_INFO_NUMBER
 
@@ -137,11 +129,8 @@ extern pstorage_handle_t			block_id_key_store;
 extern pstorage_handle_t			block_id_record;
 extern pstorage_handle_t			block_id_fig_info;
 
-extern struct key_store_length_struct		key_store_length;
-extern struct record_length_struct			record_length;
 
-extern bool				key_store_length_setted;
-extern bool				record_length_setted;
+extern struct record_length_struct			record_length;
 
 //内部flash读取和存储
 extern uint8_t					interflash_write_data[BLOCK_STORE_SIZE];
@@ -168,7 +157,7 @@ int interflash_read(uint8_t *p_data, uint32_t data_len, \
                     pstorage_size_t block_id_offset);
 
 int write_super_key(uint8_t *p_data, uint32_t data_len);
-void key_store_write(struct key_store_struct *key_store_input);
+void key_store_write(struct key_store_struct *key_store_input, uint16_t key_store_site);
 void record_write(struct door_open_record *open_record);
 int fig_info_write(struct fig_info *fp_info_set_p);
 int fig_info_read(struct fig_info *fp_info_get_p);
