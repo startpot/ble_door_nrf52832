@@ -35,6 +35,9 @@ time_t						time_get_t;
 
 uint32_t					record_length_get;
 uint32_t					key_store_length_get;
+//设置触摸屏密码
+struct key_store_struct key_store_set;
+struct key_store_struct key_store_get;
 
 uint8_t				ble_operate_code;
 
@@ -52,7 +55,7 @@ uint8_t				delete_fig_id[2];	//删除指纹的ID号
 /***********************************
 *设置开锁密码命令
 ************************************/
-static int cmd_set_key(uint8_t *p_data, uint16_t length) {
+static int sm4_key_check_open(uint8_t *p_data, uint16_t length) {
 	uint32_t err_code;
 	bool is_keys_checked = false;
 
@@ -61,47 +64,14 @@ static int cmd_set_key(uint8_t *p_data, uint16_t length) {
 	if(err_code == NRF_SUCCESS) {
 		time_get_t = my_mktime(&time_get);
 	}
-
-	//1、先进行现存密码的比对
-	is_keys_checked = keys_input_check_normal_keys((char *)p_data, 6, time_get_t);
-	if(is_keys_checked == true) {
-		//开门
-		ble_door_open();
-		//记录开门
-		door_open_record_flash((char *)p_data, 6, time_get_t);
-
-		//返回ff00
-		nus_data_send[0] = 0xff;
-		nus_data_send[1] = 0x00;
-		nus_data_send_length = 2;
-		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
-		return 0;
-	}
-
-	//2、获取种子，进行动态密码对比，对比SET_KEY_CHECK_NUMBER次
+	
+	//1、获取种子，进行动态密码对比，对比SET_KEY_CHECK_NUMBER次
 	is_keys_checked = keys_input_check_sm4_keys((char *)p_data, 6, time_get_t);
 	if(is_keys_checked == true) {
 		//开门
 		ble_door_open();
 		//记录开门
 		door_open_record_flash((char *)p_data, 6, time_get_t);
-		//记录钥匙
-		//记录密码
-		//组织密码结构体
-		memset(&key_store_struct_set, 0 , sizeof(struct key_store_struct));
-		//写密码
-		memcpy(&key_store_struct_set.key_store, p_data, 6);
-		//写有效时间
-		key_store_struct_set.key_use_time = p_data[6]*0x100 + p_data[7];
-		//写控制字
-		key_store_struct_set.control_bits = p_data[8];
-		//写版本号
-		key_store_struct_set.key_vesion = p_data[9];
-		//写存入时间
-		memcpy(&key_store_struct_set.key_store_time, &time_get_t, sizeof(time_t));
-		//直接将钥匙记录到flash
-		key_store_write(&key_store_struct_set);
-		
 		
 		//返回ff00
 		nus_data_send[0] = 0xff;
@@ -574,6 +544,37 @@ static void get_recent_record(uint8_t *p_data, uint16_t length) {
 
 }
 
+/**************************************
+*设置键盘密码
+***************************************/
+static void set_touch_key(uint8_t *p_data, uint16_t length)
+{
+	int err_code;
+	//1、设置获取的时间
+	err_code = rtc_time_read(&time_get);
+	if(err_code == NRF_SUCCESS) {
+		time_get_t = my_mktime(&time_get);
+	}
+	//2、设置获取的格式，并存储
+	//设置的密码
+	memset(&key_store_set, 0, sizeof(struct key_store_struct));
+	memcpy(key_store_set.key_store, &p_data[1], sizeof(key_store_set.key_store));
+	memcpy(&key_store_set.key_use_time, &p_data[1 + sizeof(key_store_set.key_store)], \
+					sizeof(key_store_set.key_use_time));
+	memcpy(&key_store_set.control_bits, &p_data[1 + sizeof(key_store_set.key_store) + sizeof(key_store_set.key_use_time)], \
+					sizeof(key_store_set.control_bits));
+	memcpy(&key_store_set.key_version, &p_data[1 + sizeof(key_store_set.key_store) + sizeof(key_store_set.key_use_time) + sizeof(key_store_set.control_bits)], \
+					sizeof(key_store_set.key_version));
+	memcpy(&key_store_set.key_store_time,&time_get_t, \
+					sizeof(key_store_set.key_store_time));
+	key_store_write(&key_store_set);
+	//3、返回包
+	nus_data_send[0] = p_data[0] + 0x40;
+	nus_data_send[1] = 0x00;
+	nus_data_send_length  = 2;
+	ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+}
+
 /*************************************
 *用户解除绑定命令
 **************************************/
@@ -821,17 +822,14 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 	case '7':
 	case '8':
 	case '9':
-		if(length ==0x0a) { //10字节
-			//	if(is_superkey_checked == true)//如果验证了超级密码
-			//	{
-			cmd_set_key(p_data, length);
-			//	}
-			//	else
-			//	{
-			//向手机发送失败信息"skey check fail"
-			//		ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
-			//							strlen(checked_superkey_false) );
-			//	}
+		if(length ==0x06) { //6字节
+			if(is_superkey_checked == true){//如果验证了超级密码
+				sm4_key_check_open(p_data, length);
+			}else{
+				//向手机发送失败信息"skey check fail"
+				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+										strlen(checked_superkey_false) );
+			}
 		}
 		break;
 
@@ -930,6 +928,20 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 			}
 		}
 		break;
+		
+	case SET_TOUCH_KEY://设置触摸按键密码
+		if(length == 11){//11字节
+			if(is_superkey_checked == true) { //如果验证了超级密码
+				set_touch_key(p_data, length);
+			} else {
+				//向手机发送失败信息"skey check fail"
+				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+				                    strlen(checked_superkey_false) );
+			}
+		
+		}
+		break;
+		
 
 	case USER_UNBIND_CMD: //用户解除绑定
 		if(is_superkey_checked == true) { //如果验证了超级密码

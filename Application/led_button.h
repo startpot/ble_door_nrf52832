@@ -36,9 +36,6 @@ extern uint8_t		key_input_checked_number;
 extern time_t		key_input_checked_locked_time_t;
 extern bool			key_input_checked_locked;
 
-extern struct key_store_struct		key_store_check;
-
-
 //存储在flash的密码
 extern uint8_t		flash_key_store[BLOCK_STORE_SIZE];
 

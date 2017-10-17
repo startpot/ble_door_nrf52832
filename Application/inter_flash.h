@@ -6,6 +6,11 @@
 #include <time.h>
 #include "pstorage.h"
 
+#define SUPER_KEY_LENGTH		12
+#define KEY_LENGTH				6
+
+
+#pragma pack(4)
 //存储钥匙长度
 struct key_store_length_struct {
 	uint32_t key_store_length;
@@ -15,17 +20,16 @@ struct key_store_length_struct {
 
 //存储的键盘钥匙
 struct key_store_struct {
-	uint8_t 	key_store[6];
-	uint16_t 	key_use_time;//有效时间，以1分钟为单位
+	uint8_t 	key_store[KEY_LENGTH];
+	uint16_t 	key_use_time;//有效时间，以10分钟为单位
 	uint8_t		control_bits;
-	uint8_t		key_vesion;
+	uint8_t		key_version;
 	time_t		key_store_time;
 };
 
-#define SUPER_KEY_LENGTH		12
-#define KEY_LENGTH				6
+
 //超级管理员秘钥
-extern char						super_key[SUPER_KEY_LENGTH];
+
 
 //开门记录的长度
 struct record_length_struct {
@@ -39,18 +43,19 @@ struct door_open_record {
 	time_t		door_open_time;//门打开的时间s,(从1970.1.1到现在的时间的s)
 };
 
-extern struct key_store_struct 		key_store_struct_set;
-extern struct door_open_record		door_open_record_get;
-
-
 //指纹存储信息
-#pragma pack(4)
 struct fig_info {
 	uint8_t		is_store;	//是否存储
 	uint32_t	fig_info_id;//指纹信息的ID
 	char		fig_info_data[16];//指纹的描述信息16B
 };
 #pragma pack()
+
+extern char							super_key[SUPER_KEY_LENGTH];
+
+extern struct key_store_struct 		key_store_struct_set;
+extern struct door_open_record		door_open_record_get;
+
 
 extern struct fig_info	fig_info_set;
 extern struct fig_info	fig_info_get;

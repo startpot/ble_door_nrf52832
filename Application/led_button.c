@@ -55,8 +55,6 @@ uint8_t		key_input_checked_number = 0;
 time_t		key_input_checked_locked_time_t;
 bool		key_input_checked_locked = false;
 
-struct key_store_struct			key_store_check;
-
 //存储在flash的密码
 uint8_t			flash_key_store[BLOCK_STORE_SIZE];
 
@@ -223,14 +221,15 @@ bool keys_input_check_normal_keys(char *keys_input_p, uint8_t keys_input_length,
 	if(key_store_length_get >0) {
 		for(int i=0; i<key_store_length_get; i++) {
 			//获取存储的密码
-			interflash_read((uint8_t *)&key_store_check, sizeof(struct key_store_struct), \
+			interflash_read((uint8_t *)&key_store_get, sizeof(struct key_store_struct), \
 			                (KEY_STORE_OFFSET + 1 + i));
 			memset(normal_keys_store, 0, 7);
-			memcpy(normal_keys_store, key_store_check.key_store, 6);
+			memcpy(normal_keys_store, key_store_get.key_store, 6);
 			normal_keys_store[6] = '\0';
 			//对比密码是否一致
-			if( ( strstr(normal_keys_store, keys_input_check) != NULL ) &&\
-				        ( (double)my_difftime(keys_input_time_t, key_store_check.key_store_time) < (double)key_store_check.key_use_time * 60) ) {
+			if( ( strstr(keys_input_check, normal_keys_store) != NULL ) &&\
+				 (( (double)my_difftime(keys_input_time_t, key_store_get.key_store_time) < (double)key_store_get.key_use_time * 600) ||\
+					key_store_get.key_use_time ==0xffffffff )) {
 				//密码相同，且在有效时间内
 				memcpy(key_marry, normal_keys_store, KEY_LENGTH);
 				//密码为真
@@ -250,7 +249,7 @@ bool keys_input_check_normal_keys(char *keys_input_p, uint8_t keys_input_length,
 *************************************/
 bool keys_input_check_sm4_keys(char *keys_input_p, uint8_t keys_input_length, time_t keys_input_time_t) {
 	static char keys_input_check[13];
-	static char sm4_keys_store[7];
+	static char sm4_keys[7];
 
 	//将输入密码变成字符串
 	memset(keys_input_check, 0, 13);
@@ -269,13 +268,13 @@ bool keys_input_check_sm4_keys(char *keys_input_p, uint8_t keys_input_length, ti
 		for(int i = 0; i<(KEY_CHECK_NUMBER ); i++) {
 			SM4_DPasswd(seed, keys_input_time_t, SM4_INTERVAL, SM4_COUNTER, \
 			            SM4_challenge, key_store_tmp);
-			memset(sm4_keys_store, 0, 7);
-			memcpy(sm4_keys_store, key_store_tmp, 6);
-			sm4_keys_store[6] = '\0';
+			memset(sm4_keys, 0, 7);
+			memcpy(sm4_keys, key_store_tmp, 6);
+			sm4_keys[6] = '\0';
 
-			if(strstr(sm4_keys_store, keys_input_check) != NULL) {
+			if(strstr(keys_input_check, sm4_keys) != NULL) {
 				//密码相同
-				memcpy(key_marry, sm4_keys_store, KEY_LENGTH);
+				memcpy(key_marry, sm4_keys, KEY_LENGTH);
 #if defined(BLE_DOOR_DEBUG)
 				printf("key set success\r\n");
 #endif
@@ -295,35 +294,14 @@ bool keys_input_check_sm4_keys(char *keys_input_p, uint8_t keys_input_length, ti
 /*****************************************
 *将指定位数的密码和系统密码对比，返回结果
 ******************************************/
-static bool keys_input_check(char *keys_input_p, uint8_t keys_input_length,time_t keys_input_time_t) {
+static bool touch_keys_input_check(char *keys_input_p, uint8_t keys_input_length,time_t keys_input_time_t) {
 	bool is_keys_checked = false;
 
 	//1首先进行普通密码的对比
 	is_keys_checked = keys_input_check_normal_keys(keys_input_p, keys_input_length, keys_input_time_t);
 	if(is_keys_checked == true) {
 		return true;
-	} else {
-		//2 未在存储密码中对比成功，进行动态密码对比
-		is_keys_checked = keys_input_check_sm4_keys(keys_input_p, keys_input_length, keys_input_time_t);
-		if(is_keys_checked ==true)
-		{
-		//记录密码
-			//组织密码结构体
-			memset(&key_store_struct_set, 0 , sizeof(struct key_store_struct));
-			//写密码
-			memcpy(&key_store_struct_set.key_store, keys_input_p, 6);
-			//写有效时间
-			key_store_struct_set.key_use_time = (uint16_t)KEY_INPUT_USE_TIME*10;
-			//写控制字
-			key_store_struct_set.control_bits = 0;
-			//写版本号
-			key_store_struct_set.key_vesion = 0;
-			//写存入时间
-			memcpy(&key_store_struct_set.key_store_time, &keys_input_time_t, sizeof(time_t));
-			//直接将钥匙记录到flash
-			key_store_write(&key_store_struct_set);
-		}
-	}
+	} 
 	return is_keys_checked;
 
 }
@@ -368,7 +346,7 @@ static void check_keys(void) {
 	//3.如果验证没锁定
 	if(is_check_locked == false) {
 		//判断输入的按键值
-		if(keys_input_check(key_input, key_input_site, key_input_time_t)) {
+		if(touch_keys_input_check(key_input, key_input_site, key_input_time_t)) {
 			ble_door_open();
 			key_input_checked_number = 0;
 			key_input_checked_locked_time_t = 0;
@@ -430,7 +408,11 @@ static void check_key_express(char express_value) {
 	}
 	//如果按键是'b'，检验所有按键，其他键则记录下来
 	if(express_value == 'b') {
-		check_keys();
+		if(key_input_site >=6){
+			check_keys();
+		}else{
+			clear_key_expressed();
+		}
 	} else {
 		write_key_expressed();
 	}

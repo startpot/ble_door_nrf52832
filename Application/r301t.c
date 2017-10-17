@@ -137,12 +137,16 @@ int fig_r301t_reply_check(void) {
 		//判断结果码
 		if(fig_recieve_data[9] ==0x00) {
 			//成功将设置指纹信息函数存储在内部flash
+re_store_fig_info:
 			err_code = fig_info_write(&fig_info_set);
+			if(err_code != 0){
+				goto re_store_fig_info;
+			} else {
 				nus_data_send[1] = enroll_fig_id[0];
 				nus_data_send[2] = enroll_fig_id[1];
 				nus_data_send_length = 3;
 				ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
-			
+			}
 		} else {
 			nus_data_send[1] = 0x01;
 			nus_data_send_length = 2;
@@ -162,9 +166,13 @@ int fig_r301t_reply_check(void) {
 			nus_data_send[1] = 0x00;
 			//删除记录的指纹信息
 			//1.1、获取内部flash存储区的信息
+			re_delete_fig_info:
 			pstorage_block_identifier_get(&block_id_flash_store, \
 			                              (pstorage_size_t)(FIG_INFO_OFFSET+(delete_fig_id[0]*0x100 + delete_fig_id[1])), &block_id_fig_info);
-			pstorage_clear(&block_id_fig_info, BLOCK_STORE_SIZE);
+		err_code = pstorage_clear(&block_id_fig_info, BLOCK_STORE_SIZE);
+			if(err_code !=0){
+				goto re_delete_fig_info;
+			}
 		} else {
 			nus_data_send[1] = 0x01;
 		}

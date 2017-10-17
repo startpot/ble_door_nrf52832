@@ -140,6 +140,9 @@ J4-6(touch_in)	16			5(touch_in)
 #define MOTO_FI				15
 #define MOTO_BI				14
 
+//nRST重置按键
+#define	NRST_IN				22
+
 
 // Low frequency clock source to be used by the SoftDevice
 #define NRF_CLOCK_LFCLKSRC      NRF_CLOCK_LFCLKSRC_XTAL_20_PPM

@@ -21,6 +21,10 @@ extern struct tm				time_set;
 extern struct tm				time_get;
 extern time_t					time_get_t;
 
+//设置触摸屏密码
+extern struct key_store_struct key_store_set;
+extern struct key_store_struct key_store_get;
+
 extern uint32_t				record_length_get;
 extern uint32_t				key_store_length_get;
 
@@ -54,6 +58,7 @@ extern uint8_t				delete_fig_id[2];
 #define	GET_RECENT_RECORD		0x8A
 #define GET_MAC					0x8B	//返回mac
 #define GET_BATTERY_LEVEL		0x8C	//返回电池电量
+#define SET_TOUCH_KEY			0x8D	//设置触摸屏密码
 
 #define USER_UNBIND_CMD			0x8E	//用户解除绑定
 
@@ -69,6 +74,9 @@ extern uint8_t				delete_fig_id[2];
 #define GET_FIG_INFO			0x73	//获取指纹信息
 #define STOP_FIG				0x74	//停止指纹模块
 #define DELETE_ALL_FIG			0x75	//删除所有指纹
+
+
+
 
 void ble_reply(uint8_t operate_code, uint8_t *reply_code, uint16_t reply_code_length);
 void operate_code_check(uint8_t *p_data, uint16_t length);
