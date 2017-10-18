@@ -138,7 +138,7 @@ void flash_init(void) {
 #endif
 	}
 #if defined(BLE_DOOR_DEBUG)
-		printf("flash init success \r\n");
+	printf("flash init success \r\n");
 #endif
 
 }
@@ -227,7 +227,6 @@ int interflash_read(uint8_t *p_data, uint32_t data_len, \
 	}
 
 }
-
 
 /*************************************************************************
 *写入管理员秘钥(12位ASCII)
@@ -325,17 +324,17 @@ void record_write(struct door_open_record *open_record) {
 int fig_info_write(struct fig_info *fp_info_set_p) {
 	int err_code;
 //	err_code = interflash_write((uint8_t *) fp_info_set_p, sizeof(struct fig_info), \
-	                            (pstorage_size_t)(FIG_INFO_OFFSET + fp_info_set_p->fig_info_id));
+	(pstorage_size_t)(FIG_INFO_OFFSET + fp_info_set_p->fig_info_id));
 	//1、获取label
 	pstorage_block_identifier_get(&block_id_flash_store, \
-		            (pstorage_size_t)(FIG_INFO_OFFSET+fp_info_set_p->fig_info_id), &block_id_fig_info);
+	                              (pstorage_size_t)(FIG_INFO_OFFSET+fp_info_set_p->fig_info_id), &block_id_fig_info);
 	//2、清除区域
 	pstorage_clear(&block_id_fig_info, BLOCK_STORE_SIZE);
 	//3、存储信息
 	memset(interflash_write_data, 0, BLOCK_STORE_SIZE);
 	memcpy(interflash_write_data, fp_info_set_p, sizeof(struct fig_info));
 	err_code = pstorage_store(&block_id_fig_info, interflash_write_data, BLOCK_STORE_SIZE, 0);
-	
+
 	return err_code;
 }
 

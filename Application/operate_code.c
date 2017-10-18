@@ -64,20 +64,20 @@ static int sm4_key_check_open(uint8_t *p_data, uint16_t length) {
 	if(err_code == NRF_SUCCESS) {
 		time_get_t = my_mktime(&time_get);
 	}
-	
+
 	//1、获取种子，进行动态密码对比，对比SET_KEY_CHECK_NUMBER次
 	is_keys_checked = keys_input_check_sm4_keys((char *)p_data, 6, time_get_t);
 	if(is_keys_checked == true) {
-		//开门
-		ble_door_open();
-		//记录开门
-		door_open_record_flash((char *)p_data, 6, time_get_t);
-		
 		//返回ff00
 		nus_data_send[0] = 0xff;
 		nus_data_send[1] = 0x00;
 		nus_data_send_length = 2;
 		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+
+		//开门
+		ble_door_open();
+		//记录开门
+		door_open_record_flash((char *)p_data, 6, time_get_t);
 		return 0;
 	}
 
@@ -511,8 +511,7 @@ static void get_recent_record(uint8_t *p_data, uint16_t length) {
 /**************************************
 *设置键盘密码
 ***************************************/
-static int set_touch_key(uint8_t *p_data, uint16_t length)
-{
+static int set_touch_key(uint8_t *p_data, uint16_t length) {
 	int err_code;
 	uint16_t store_site;
 	//1、设置获取的时间
@@ -527,18 +526,17 @@ static int set_touch_key(uint8_t *p_data, uint16_t length)
 	key_store_set.is_store = 'w';
 	memcpy(key_store_set.key_store, &p_data[1], sizeof(key_store_set.key_store));
 	memcpy(&key_store_set.key_use_time, &p_data[1 + sizeof(key_store_set.key_store)], \
-					sizeof(key_store_set.key_use_time));
+	       sizeof(key_store_set.key_use_time));
 	memcpy(&key_store_set.key_store_time,&time_get_t, \
-					sizeof(key_store_set.key_store_time));
+	       sizeof(key_store_set.key_store_time));
 	//3、存储密码
 	//3、1寻找存储的位置
-	for(int i = 0; i < KEY_STORE_NUMBER; i++){
+	for(int i = 0; i < KEY_STORE_NUMBER; i++) {
 		interflash_read((uint8_t *)&key_store_get, sizeof(struct key_store_struct), (pstorage_size_t)(KEY_STORE_OFFSET + i));
-		if(key_store_get.is_store != 'w')
-		{
+		if(key_store_get.is_store != 'w') {
 			store_site = i;
 			goto touch_key_store;
-		}	
+		}
 	}
 touch_key_store:
 	key_store_write(&key_store_set, store_site);
@@ -550,7 +548,7 @@ touch_key_store:
 	nus_data_send_length  = 4;
 	ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 	return 0;
-	
+
 	//都没有，记录满
 	nus_data_send[0] = p_data[0] + 0x40;
 	nus_data_send[1] = 0x01;
@@ -564,14 +562,14 @@ touch_key_store:
 /************************************
 *删除键盘密码
 ************************************/
-static void delete_touch_key(uint8_t *p_data, uint16_t length){
+static void delete_touch_key(uint8_t *p_data, uint16_t length) {
 	uint16_t delete_site;//删除的位置
 	//1、获取要删除的ID号
 	delete_site = p_data[1] * 0x100 + p_data[2];
 	//2、读取指定的ID号的键盘密码内容
 	interflash_read((uint8_t *)&key_store_get, sizeof(struct key_store_struct), (pstorage_size_t)(KEY_STORE_OFFSET + delete_site));
 	//3、判断密码是否存在，存在的话，删除
-	if(key_store_get.is_store =='w'){
+	if(key_store_get.is_store =='w') {
 		//获取需要存储的位置
 		pstorage_block_identifier_get(&block_id_flash_store, (pstorage_size_t)(KEY_STORE_OFFSET + delete_site), &block_id_read);
 		//清除当前存储区域
@@ -588,27 +586,27 @@ static void delete_touch_key(uint8_t *p_data, uint16_t length){
 *获取现在存储的密码
 ******************************************/
 static void get_touch_key_store(uint8_t *p_data, uint16_t length) {
-	
+
 	memset(nus_data_send, 0, BLE_NUS_MAX_DATA_LEN);
-	
+
 	for(int i = 0; i < KEY_STORE_NUMBER; i++) {
 		interflash_read((uint8_t *)&key_store_get, sizeof(struct key_store_struct), (pstorage_size_t)(KEY_STORE_OFFSET + i));
-		if(key_store_get.is_store == 'w'){
+		if(key_store_get.is_store == 'w') {
 			nus_data_send[0] = p_data[0] + 0x40;
 			nus_data_send[1] = i/0x100;
 			nus_data_send[2] = i&0xff;
 			//密码
 			memcpy(&nus_data_send[3], \
-				key_store_get.key_store, sizeof(key_store_get.key_store));
+			       key_store_get.key_store, sizeof(key_store_get.key_store));
 			//有效时间
 			memcpy(&nus_data_send[3 + sizeof(key_store_get.key_store)], \
-				&key_store_get.key_use_time, sizeof(key_store_get.key_use_time));
+			       &key_store_get.key_use_time, sizeof(key_store_get.key_use_time));
 			//存储时间
 			memcpy(&nus_data_send[3 + sizeof(key_store_get.key_store) + sizeof(key_store_get.key_use_time)], \
-				&key_store_get.key_store_time, sizeof(key_store_get.key_store_time));
+			       &key_store_get.key_store_time, sizeof(key_store_get.key_store_time));
 			nus_data_send_length = 3 + sizeof(key_store_get.key_store) + \
-										sizeof(key_store_get.key_use_time) + \
-										sizeof(key_store_get.key_store_time);
+			                       sizeof(key_store_get.key_use_time) + \
+			                       sizeof(key_store_get.key_store_time);
 			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 		}
 	}
@@ -620,7 +618,7 @@ static void get_touch_key_store(uint8_t *p_data, uint16_t length) {
 	nus_data_send[4] = 0x00;
 	nus_data_send_length = 5;
 	ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
-	
+
 }
 
 /*************************************
@@ -700,7 +698,7 @@ static int enroll_fig(uint8_t *p_data, uint16_t length) {
 	reply_full[2] = 0xff;
 	reply_full[3] = 0xff;
 	ble_reply(p_data[0], reply_full, sizeof(reply_full));
-	
+
 	return 0;
 
 exe_enroll_fig:
@@ -736,17 +734,17 @@ static int delete_fig(uint8_t *p_data, uint16_t length) {
 //	uint16_t marry_fig_id;//匹配的指纹id
 	uint8_t reply_data[1];
 	uint8_t r301t_send_deletechar_idx_cmd[5];
-	
+
 	pstorage_block_identifier_get(&block_id_flash_store, \
-		                              (pstorage_size_t)(FIG_INFO_OFFSET+(p_data[1]*0x100 + p_data[2])), &block_id_fig_info);
+	                              (pstorage_size_t)(FIG_INFO_OFFSET+(p_data[1]*0x100 + p_data[2])), &block_id_fig_info);
 	memset(&fig_info_get, 0, sizeof(struct fig_info));
 	pstorage_load((uint8_t *)&fig_info_get, &block_id_fig_info, sizeof(struct fig_info), 0);
 
-		if(fig_info_get.is_store == 'w') {
-			//跳转执行存储
-			goto exe_delete_fig;
-		}
-	
+	if(fig_info_get.is_store == 'w') {
+		//跳转执行存储
+		goto exe_delete_fig;
+	}
+
 	//1.1.2、遍历完后，没有空的fig，返回错误
 	reply_data[0] = 0x01;
 	ble_reply(p_data[0], reply_data, sizeof(reply_data));
@@ -782,7 +780,7 @@ exe_delete_fig:
 *****************************/
 static int get_fig_info(uint8_t *p_data, uint16_t length) {
 	uint8_t end_reply[4] = {0, 0, 0, 0};
-	
+
 	//1、获取flash中的指纹信息
 	for(int i = 0; i < FIG_INFO_NUMBER; i++) {
 		//1.1、获取内部flash存储区的信息
@@ -809,7 +807,7 @@ static int get_fig_info(uint8_t *p_data, uint16_t length) {
 /***********************
 *停止指纹模块
 ***********************/
-static void stop_fig(uint8_t *p_data, uint16_t length){
+static void stop_fig(uint8_t *p_data, uint16_t length) {
 	uint8_t reply_data[1];
 	//1、关闭指纹模块电源
 	nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
@@ -822,13 +820,13 @@ static void stop_fig(uint8_t *p_data, uint16_t length){
 	//4、回复上位机
 	reply_data[0] = 0x00;
 	ble_reply(p_data[0], reply_data, sizeof(reply_data));
-	
+
 }
 
 /****************************************
 *删除所有指纹信息
 ****************************************/
-static void delete_all_fig(uint8_t *p_data, uint16_t length){
+static void delete_all_fig(uint8_t *p_data, uint16_t length) {
 	//1.设置指令码为GR_FIG_CMD_EMPTY
 	fig_cmd_code = GR_FIG_CMD_EMPTY;
 	ble_operate_code = p_data[0];
@@ -844,12 +842,12 @@ static void delete_all_fig(uint8_t *p_data, uint16_t length){
 /*****************************
 *ble回复函数
 ******************************/
-void ble_reply(uint8_t operate_code, uint8_t *reply_code, uint16_t reply_code_length){
+void ble_reply(uint8_t operate_code, uint8_t *reply_code, uint16_t reply_code_length) {
 	memset(nus_data_send, 0, sizeof(nus_data_send));
 	nus_data_send[0] = operate_code + 0x40;
 	memcpy(&nus_data_send[1], reply_code, reply_code_length);
 	ble_nus_string_send(&m_nus, nus_data_send, reply_code_length + 1);
-	
+
 }
 
 /************************************************************
@@ -871,16 +869,10 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 	case '8':
 	case '9':
 		if(length ==0x06) { //6字节
-			if(is_superkey_checked == true){//如果验证了超级密码
 				sm4_key_check_open(p_data, length);
-			}else{
-				//向手机发送失败信息"skey check fail"
-				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
-										strlen(checked_superkey_false) );
-			}
 		}
 		break;
-	
+
 	case SET_SUPER_KEY://设置管理员密码
 		if(length == 0x0d) { //13字节
 			set_super_key(p_data, length);
@@ -908,7 +900,7 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 	case GET_TIME://获取时间
 		get_rtc_time(p_data, length);
 		break;
-	
+
 	case SET_KEY_SEED://写入种子
 		if(length == 0x11) { //17字节
 			if(is_superkey_checked == true) { //如果验证了超级密码
@@ -966,9 +958,9 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 			}
 		}
 		break;
-		
+
 	case SET_TOUCH_KEY://设置触摸按键密码
-		if(length == 9){//9字节
+		if(length == 9) { //9字节
 			if(is_superkey_checked == true) { //如果验证了超级密码
 				set_touch_key(p_data, length);
 			} else {
@@ -976,12 +968,12 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
 				                    strlen(checked_superkey_false) );
 			}
-		
+
 		}
 		break;
-		
+
 	case DELETE_TOUCH_KEY://设置触摸按键密码
-		if(length == 3){//11字节
+		if(length == 3) { //11字节
 			if(is_superkey_checked == true) { //如果验证了超级密码
 				delete_touch_key(p_data, length);
 			} else {
@@ -989,10 +981,10 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
 				                    strlen(checked_superkey_false) );
 			}
-		
+
 		}
-		break;	
-	
+		break;
+
 	case GET_TOUCH_KEY_STORE://查询有效密码
 		if(is_superkey_checked == true) { //如果验证了超级密码
 			get_touch_key_store(p_data, length);
@@ -1002,7 +994,7 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 			                    strlen(checked_superkey_false) );
 		}
 		break;
-		
+
 	case USER_UNBIND_CMD: //用户解除绑定
 		if(is_superkey_checked == true) { //如果验证了超级密码
 			user_unbind_cmd(p_data, length);
@@ -1047,7 +1039,7 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 			                    strlen(checked_superkey_false) );
 		}
 		break;
-		
+
 	case STOP_FIG://停止指纹模块
 		if(is_superkey_checked == true) { //如果验证了超级密码
 			stop_fig(p_data, length);
@@ -1066,7 +1058,7 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 			                    strlen(checked_superkey_false) );
 		}
 		break;
-		
+
 	case 0x1B://指纹模块fm260b指令，长度为8，直接通过串口发送给模块
 		if(length == 8) { //长度为8
 			if(is_superkey_checked == true) { //如果验证了超级密码

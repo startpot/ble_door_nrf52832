@@ -208,15 +208,15 @@ bool keys_input_check_normal_keys(char *keys_input_p, uint8_t keys_input_length,
 	for(int i=0; i < KEY_STORE_NUMBER; i++) {
 		//获取存储的密码
 		interflash_read((uint8_t *)&key_store_get, sizeof(struct key_store_struct), \
-			                (KEY_STORE_OFFSET + i));
-		if(key_store_get.is_store == 'w'){
+		                (KEY_STORE_OFFSET + i));
+		if(key_store_get.is_store == 'w') {
 			memset(normal_keys_store, 0, 7);
 			memcpy(normal_keys_store, key_store_get.key_store, 6);
 			normal_keys_store[6] = '\0';
 			//对比密码是否一致
 			if( ( strstr(keys_input_check, normal_keys_store) != NULL ) &&\
-					(( (double)my_difftime(keys_input_time_t, key_store_get.key_store_time) < (double)key_store_get.key_use_time * 600) ||\
-					key_store_get.key_use_time ==0xffff )) {
+			        (( (double)my_difftime(keys_input_time_t, key_store_get.key_store_time) < (double)key_store_get.key_use_time * 600) ||\
+			         key_store_get.key_use_time ==0xffff )) {
 				//密码相同，且在有效时间内
 				memcpy(key_marry, normal_keys_store, KEY_LENGTH);
 				//密码为真
@@ -288,7 +288,7 @@ static bool touch_keys_input_check(char *keys_input_p, uint8_t keys_input_length
 	is_keys_checked = keys_input_check_normal_keys(keys_input_p, keys_input_length, keys_input_time_t);
 	if(is_keys_checked == true) {
 		return true;
-	} 
+	}
 	return is_keys_checked;
 
 }
@@ -395,9 +395,9 @@ static void check_key_express(char express_value) {
 	}
 	//如果按键是'b'，检验所有按键，其他键则记录下来
 	if(express_value == 'b') {
-		if(key_input_site >=6){
+		if(key_input_site >=6) {
 			check_keys();
-		}else{
+		} else {
 			clear_key_expressed();
 		}
 	} else {
@@ -409,8 +409,8 @@ static void check_key_express(char express_value) {
 /************************************
 *用户解绑操作
 ************************************/
-static void nrst_all(void){
-	
+static void nrst_all(void) {
+
 	//1、清除内部flash所有数据
 	for(int j=0; j < BLOCK_STORE_COUNT; j++) {
 		pstorage_block_identifier_get(&block_id_flash_store, \
