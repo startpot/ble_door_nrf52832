@@ -128,33 +128,6 @@ int fig_r301t_reply_check(void) {
 	//send_fig_r301t_reply_data();
 	//判断发送包的指令码
 	switch(fig_cmd_code) {
-	case GR_FIG_CMD_STORECHAR:
-		//关闭指纹芯片电源电源
-		nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
-
-		//将命令加上0x40,返回给app
-		nus_data_send[0] = ble_operate_code + 0x40;
-		//判断结果码
-		if(fig_recieve_data[9] ==0x00) {
-			//成功将设置指纹信息函数存储在内部flash
-restore_fig_info:
-			err_code = fig_info_write(&fig_info_set);
-			if(err_code != 0) {
-				goto restore_fig_info;
-			} else {
-				nus_data_send[1] = enroll_fig_id[0];
-				nus_data_send[2] = enroll_fig_id[1];
-				nus_data_send_length = 3;
-				ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
-			}
-		} else {
-			nus_data_send[1] = 0x01;
-			nus_data_send_length = 2;
-			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
-		}
-
-		break;
-
 	case GR_FIG_CMD_DELCHAR:
 		//关闭指纹芯片电源电源
 		nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
@@ -164,6 +137,8 @@ restore_fig_info:
 		//判断结果码
 		if(fig_recieve_data[9] ==0x00) {
 			nus_data_send[1] = 0x00;
+			nus_data_send_length = 2;
+			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 			//删除记录的指纹信息
 			//1.1、获取内部flash存储区的信息
 redelete_fig_info:
@@ -175,9 +150,10 @@ redelete_fig_info:
 			}
 		} else {
 			nus_data_send[1] = 0x01;
+			nus_data_send_length = 2;
+			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 		}
-		nus_data_send_length = 2;
-		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+
 		break;
 
 	case GR_FIG_CMD_EMPTY:
@@ -202,80 +178,78 @@ redelete_fig_info:
 	}
 
 	//分析数据包,如果不是自动注册模式,且是手指按下进入了搜索模式
-	if(is_r301t_autoenroll ==false) {
-		if(	r301t_autosearch_step >0) {
-			//手指按下设置的自动搜索模式，
-			//应答包失败
-			if(fig_recieve_data[9] !=0x00) {//失败的话，关闭电源模块，将步骤和错误码发送给上位机
-				//失败情况，如果是第一步则重复发GR_GetImage
-				/*	if(r301t_autosearch_step == 1) {
-						//第一步执行失败，继续发送getimage命令
-						fig_r301t_send_cmd(0x01, sizeof(r301t_send_getimg_cmd), \
-						                   r301t_send_getimg_cmd);
-						fig_recieve_data_length =0;
-					} else {*/
-				//关闭指纹模块电源
-				nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
-				//返回第几步
-				//将命令加上0x40,返回给app
-				nus_data_send[0] = ble_operate_code;
-				//第几步
-				nus_data_send[1] = r301t_autosearch_step;
-				nus_data_send[2] = fig_recieve_data[9];
-				nus_data_send_length = 3;
-				ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
-				//应答失败，鸣笛4次
-				beep_didi(4);
-				//如果不是第一步，则直接退出
-				r301t_autosearch_step = 0;
-				//	}
-				fig_recieve_data_length =0;
-			} else {
-				//判断自动搜索的步骤
-				switch(r301t_autosearch_step) {
-				case 1://第一步的应答包的话，发送第2个指令，设置步骤为2,发送genchar生成特征值命令
-					r301t_autosearch_step =2;
-					fig_recieve_data_length = 0;
-					fig_cmd_code = GR_FIG_CMD_GENCHAR;
-					fig_r301t_send_cmd(0x01, sizeof(r301t_send_genchar1_cmd), \
-					                   r301t_send_genchar1_cmd);
-					break;
+	if(is_r301t_autoenroll ==false && r301t_autosearch_step >0) {
+		//手指按下设置的自动搜索模式，
+		//应答包失败
+		if(fig_recieve_data[9] !=0x00) {//失败的话，关闭电源模块，将步骤和错误码发送给上位机
+			//失败情况，如果是第一步则重复发GR_GetImage
+			/*	if(r301t_autosearch_step == 1) {
+					//第一步执行失败，继续发送getimage命令
+					fig_r301t_send_cmd(0x01, sizeof(r301t_send_getimg_cmd), \
+					                   r301t_send_getimg_cmd);
+					fig_recieve_data_length =0;
+				} else {*/
+			//关闭指纹模块电源
+			nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
+			//返回第几步
+			//将命令加上0x40,返回给app
+			nus_data_send[0] = ble_operate_code;
+			//第几步
+			nus_data_send[1] = r301t_autosearch_step;
+			nus_data_send[2] = fig_recieve_data[9];
+			nus_data_send_length = 3;
+			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+			//应答失败，鸣笛4次
+			beep_didi(4);
+			//如果不是第一步，则直接退出
+			r301t_autosearch_step = 0;
+			//	}
+			fig_recieve_data_length =0;
+		} else {
+			//判断自动搜索的步骤
+			switch(r301t_autosearch_step) {
+			case 1://第一步的应答包的话，发送第2个指令，设置步骤为2,发送genchar生成特征值命令
+				r301t_autosearch_step =2;
+				fig_recieve_data_length = 0;
+				fig_cmd_code = GR_FIG_CMD_GENCHAR;
+				fig_r301t_send_cmd(0x01, sizeof(r301t_send_genchar1_cmd), \
+				                   r301t_send_genchar1_cmd);
+				break;
 
-				case 2://第二步的应答包的话，发送第3个指令，设置步骤为3,发送搜索指纹命令
-					r301t_autosearch_step =3;
-					fig_recieve_data_length = 0;
-					fig_cmd_code = GR_FIG_CMD_SEARCH;
-					fig_r301t_send_cmd(0x01, sizeof(r301t_send_search_cmd), \
-					                   r301t_send_search_cmd);
-					break;
+			case 2://第二步的应答包的话，发送第3个指令，设置步骤为3,发送搜索指纹命令
+				r301t_autosearch_step =3;
+				fig_recieve_data_length = 0;
+				fig_cmd_code = GR_FIG_CMD_SEARCH;
+				fig_r301t_send_cmd(0x01, sizeof(r301t_send_search_cmd), \
+				                   r301t_send_search_cmd);
+				break;
 
-				case 3://第三步，判断结果码
-					//最后一步，判断结果
-					if(fig_recieve_data[9] == 0) {
-						//返回搜索到了指纹
-						//打开门
-						ble_door_open();
-						//TODO记录指纹开锁
-						//获取按下开锁键的时间
-						rtc_time_read(&key_input_time_tm);
-						key_input_time_t = my_mktime(&key_input_time_tm);
-						memset(fig_input, 0, sizeof(fig_input));
-						fig_input[0] = 'f';
-						fig_input[1] = 'g';
-						memcpy(&fig_input[2], &fig_recieve_data[10], 4);
-						door_open_record_flash((char *)fig_input,6, key_input_time_t);
-					}
-					//设置步骤为0，状态为false
-					r301t_autosearch_step = 0;
-					fig_recieve_data_length = 0;
-					//关闭指纹芯片电源电源
-					nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
-					break;
-
-				default:
-
-					break;
+			case 3://第三步，判断结果码
+				//最后一步，判断结果
+				if(fig_recieve_data[9] == 0) {
+					//返回搜索到了指纹
+					//打开门
+					ble_door_open();
+					//TODO记录指纹开锁
+					//获取按下开锁键的时间
+					rtc_time_read(&key_input_time_tm);
+					key_input_time_t = my_mktime(&key_input_time_tm);
+					memset(fig_input, 0, sizeof(fig_input));
+					fig_input[0] = 'f';
+					fig_input[1] = 'g';
+					memcpy(&fig_input[2], &fig_recieve_data[10], 4);
+					door_open_record_flash((char *)fig_input,6, key_input_time_t);
 				}
+				//设置步骤为0，状态为false
+				r301t_autosearch_step = 0;
+				fig_recieve_data_length = 0;
+				//关闭指纹芯片电源电源
+				nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
+				break;
+
+			default:
+
+				break;
 			}
 		}
 	} else { //自动注册模式
@@ -338,9 +312,8 @@ redelete_fig_info:
 					break;
 
 				case 5://第5步，发送储storechar命令，完成，设置步骤为0,设置标志位为false
-					r301t_autoenroll_step = 0;
+					r301t_autoenroll_step = 6;
 					fig_recieve_data_length = 0;
-					is_r301t_autoenroll = false;
 					//设置命令码为storechar
 					fig_cmd_code = GR_FIG_CMD_STORECHAR;
 					//组织发送存储命令
@@ -353,6 +326,34 @@ redelete_fig_info:
 
 					fig_r301t_send_cmd(0x01, sizeof(r301t_send_storechar_idx_cmd), \
 					                   r301t_send_storechar_idx_cmd);
+					break;
+				case 6://第6步，判断结果
+					//关闭指纹芯片电源电源
+					nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
+					r301t_autoenroll_step = 0;
+					fig_recieve_data_length = 0;
+					//将命令加上0x40,返回给app
+					nus_data_send[0] = ble_operate_code + 0x40;
+					//判断结果码
+					if(fig_recieve_data[9] ==0x00) {
+						nus_data_send[1] = 0x00;
+						nus_data_send[2] = enroll_fig_id[0];
+						nus_data_send[3] = enroll_fig_id[1];
+						nus_data_send_length = 4;
+						ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+						//成功将设置指纹信息函数存储在内部flash
+restore_fig_info:
+						err_code = fig_info_write(&fig_info_set);
+						if(err_code != 0) {
+							goto restore_fig_info;
+						}
+					} else {
+						nus_data_send[1] = 0x01;
+						nus_data_send_length = 2;
+						ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+					}
+					is_r301t_autoenroll = false;
+					break;
 				default:
 
 					break;

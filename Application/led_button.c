@@ -464,9 +464,9 @@ static void touch_finger_int_handler(uint32_t event_pins_low_to_high, uint32_t e
 			nrf_gpio_pin_set(BATTERY_LEVEL_EN);
 			//上电需要0.5s的准备时间
 			nrf_delay_ms(1000);
-			//设置步骤为1,设置命令码为search fig
+			//设置步骤为1,设置命令码为getimg
 			r301t_autosearch_step = 1;
-			ble_operate_code = SEARCH_FIG;
+			ble_operate_code = GR_FIG_CMD_GETIMG;
 			//指纹模块r301t
 			//发送获取图像命令
 			fig_r301t_send_cmd(0x01, sizeof(r301t_send_getimg_cmd), \

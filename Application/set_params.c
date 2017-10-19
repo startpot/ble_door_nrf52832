@@ -67,7 +67,7 @@ void set_default_params(void) {
 		BEEP_DIDI_NUMBER = 0x05;//蜂鸣器响次数
 		VOL_VALUE = 0x2C;//电池电压报警,左移4位，大致是5.0V(设定的欠压值)
 		KEY_INPUT_USE_TIME = 0x05;//键盘密码输入密码有效时间，以10min为单位
-		MOTO_DIR = 1;
+		MOTO_DIR = 0;
 	}
 
 #if defined(BLE_DOOR_DEBUG)
