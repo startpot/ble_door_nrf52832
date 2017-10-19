@@ -391,13 +391,19 @@ static void check_key_express(char express_value) {
 			nrf_gpio_pin_set( BATTERY_LEVEL_EN );
 			nrf_delay_ms(500);
 			nrf_gpio_pin_clear( BATTERY_LEVEL_EN );
+			//蜂鸣器响1声
+			beep_didi(1);
 		}
 	}
 	//如果按键是'b'，检验所有按键，其他键则记录下来
 	if(express_value == 'b') {
 		if(key_input_site >=6) {
+			//蜂鸣器响1声
+			beep_didi(1);
 			check_keys();
 		} else {
+			//蜂鸣器响1声
+			beep_didi(1);
 			clear_key_expressed();
 		}
 	} else {

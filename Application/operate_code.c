@@ -414,7 +414,17 @@ static void get_mac(uint8_t *p_data, uint16_t length) {
 *获取电池电量 0x2c~~5.0V 0x36~~6.0V ，大致1~~~0.1V
 ****************************************************/
 static void get_battery_level(uint8_t *p_data, uint16_t length) {
-	uint8_t tmp = (battery_level_value &0x0ff0) >>4;
+	uint8_t tmp;
+
+	//1、开启电源使能
+	nrf_gpio_pin_set(BATTERY_LEVEL_EN);
+	//2、开启AD采集
+	saadc_sampling_event_enable();
+	nrf_delay_ms(1000);
+	//3、获取电量数据
+	tmp = (battery_level_value &0x0ff0) >>4;
+	//4、关闭电源使能
+	nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
 
 	//将命令加上0x40,返回给app
 	nus_data_send[0] = p_data[0] + 0x40;

@@ -39,8 +39,8 @@ void saadc_sampling_event_init(void) {
 	err_code = nrf_drv_timer_init(&m_timer,NULL, timer_handler);
 	APP_ERROR_CHECK(err_code);
 
-	//setup m_timer for compare event every 4000ms
-	uint32_t ticks = nrf_drv_timer_ms_to_ticks(&m_timer, 4000);
+	//setup m_timer for compare event every 4ms
+	uint32_t ticks = nrf_drv_timer_ms_to_ticks(&m_timer, 4);
 	nrf_drv_timer_extended_compare(&m_timer, NRF_TIMER_CC_CHANNEL0, \
 	                               ticks, NRF_TIMER_SHORT_COMPARE0_CLEAR_MASK, false);
 	nrf_drv_timer_enable(&m_timer);
@@ -132,7 +132,7 @@ void battery_level_init(void) {
 	//初始化saadc
 	saadc_init();
 	//使能saadc sample event
-	saadc_sampling_event_enable();
+//	saadc_sampling_event_enable();
 
 }
 
