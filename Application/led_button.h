@@ -36,11 +36,7 @@ extern uint8_t		key_input_checked_number;
 extern time_t		key_input_checked_locked_time_t;
 extern bool			key_input_checked_locked;
 
-//存储在flash的密码
-extern uint8_t		flash_key_store[BLOCK_STORE_SIZE];
-
 extern struct door_open_record		open_record_now;
-
 
 #define BUTTON_DETECTION_DELAY		APP_TIMER_TICKS(50, APP_TIMER_PRESCALER)
 

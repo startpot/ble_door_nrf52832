@@ -129,8 +129,8 @@ int fig_r301t_reply_check(void) {
 	//判断发送包的指令码
 	switch(fig_cmd_code) {
 	case GR_FIG_CMD_DELCHAR:
-		//关闭指纹芯片电源电源
-		nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
+		//关闭指纹芯片
+		close_fig();
 
 		//将命令加上0x40,返回给app
 		nus_data_send[0] = ble_operate_code + 0x40;
@@ -157,8 +157,9 @@ redelete_fig_info:
 		break;
 
 	case GR_FIG_CMD_EMPTY:
-		//关闭指纹芯片电源电源
-		nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
+		//关闭指纹芯片
+		close_fig();
+
 		//清除所有指纹库信息
 		for(int i = 0; i <FIG_INFO_NUMBER; i++) {
 			pstorage_block_identifier_get(&block_id_flash_store, \
@@ -189,8 +190,9 @@ redelete_fig_info:
 					                   r301t_send_getimg_cmd);
 					fig_recieve_data_length =0;
 				} else {*/
-			//关闭指纹模块电源
-			nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
+			//关闭指纹模块
+			close_fig();
+
 			//返回第几步
 			//将命令加上0x40,返回给app
 			nus_data_send[0] = ble_operate_code;
@@ -243,8 +245,8 @@ redelete_fig_info:
 				//设置步骤为0，状态为false
 				r301t_autosearch_step = 0;
 				fig_recieve_data_length = 0;
-				//关闭指纹芯片电源电源
-				nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
+				//关闭指纹芯片
+				close_fig();
 				break;
 
 			default:
@@ -273,8 +275,8 @@ redelete_fig_info:
 					r301t_autoenroll_step = 0x00;
 					fig_recieve_data_length = 0;
 					is_r301t_autoenroll = false;
-					//关闭指纹模块电源
-					nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
+					//关闭指纹模块
+					close_fig();
 					return 0;
 				}
 			} else {
@@ -328,8 +330,8 @@ redelete_fig_info:
 					                   r301t_send_storechar_idx_cmd);
 					break;
 				case 6://第6步，判断结果
-					//关闭指纹芯片电源电源
-					nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
+					//关闭指纹芯片
+					close_fig();
 					r301t_autoenroll_step = 0;
 					fig_recieve_data_length = 0;
 					//将命令加上0x40,返回给app

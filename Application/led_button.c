@@ -44,7 +44,7 @@ char			key_express_value;
 char		key_input[KEY_MAX_NUMBER];
 uint8_t		key_input_site;
 
-char			key_marry[KEY_LENGTH];//匹配的密码
+char		key_marry[KEY_LENGTH];//匹配的密码
 
 //输入的密码的时间
 struct		tm key_input_time_tm;
@@ -54,9 +54,6 @@ time_t		key_input_time_t;
 uint8_t		key_input_checked_number = 0;
 time_t		key_input_checked_locked_time_t;
 bool		key_input_checked_locked = false;
-
-//存储在flash的密码
-uint8_t			flash_key_store[BLOCK_STORE_SIZE];
 
 ///开锁记录全局变量
 struct door_open_record		open_record_now;
@@ -77,8 +74,23 @@ void leds_init(void) {
 #if defined(BLE_DOOR_DEBUG)
 	printf("all leds not lit\r\n");
 #endif
+	//设置电源输出
 	nrf_gpio_cfg_output( BATTERY_LEVEL_EN );
 	nrf_gpio_pin_clear( BATTERY_LEVEL_EN );
+	//设置TOUCH_IIC_EN_PIN输出
+	nrf_gpio_cfg_output(TOUCH_IIC_EN_PIN);
+	nrf_gpio_pin_clear(TOUCH_IIC_EN_PIN);
+	//设置NFC引脚
+	nrf_gpio_cfg_output(NFC_A_PIN);
+	nrf_gpio_pin_clear(NFC_A_PIN);
+	nrf_gpio_cfg_output(NFC_B_PIN);
+	nrf_gpio_pin_clear(NFC_B_PIN);
+	//设置uart的引脚
+	nrf_gpio_cfg_output(RX_PIN_NUMBER);
+	nrf_gpio_pin_clear(RX_PIN_NUMBER);
+	nrf_gpio_cfg_output(TX_PIN_NUMBER);
+	nrf_gpio_pin_clear(TX_PIN_NUMBER);
+
 
 }
 
@@ -427,10 +439,8 @@ static void nrst_all(void) {
 	}
 
 	//2、清除指纹内所有存储指纹
-	//2.1、打开指纹模块电源
-	nrf_gpio_pin_set(BATTERY_LEVEL_EN);
-	//上电需要0.5s的准备时间
-	nrf_delay_ms(1000);
+	//2.1、打开指纹模
+	open_fig();
 	//2.2、发送删除指令
 	fig_r301t_send_cmd(0x01, sizeof(r301t_send_empty_cmd), r301t_send_empty_cmd);
 	//2.3、获取指令码,此指令码需要在回复命令处理中使用
@@ -466,13 +476,11 @@ static void touch_finger_int_handler(uint32_t event_pins_low_to_high, uint32_t e
 		}*/
 
 		if(r301t_autosearch_step == 0 && is_r301t_autoenroll == false) {
-			//打开模块芯片电源
-			nrf_gpio_pin_set(BATTERY_LEVEL_EN);
-			//上电需要0.5s的准备时间
-			nrf_delay_ms(1000);
+			//打开模块芯片
+			open_fig();
 			//设置步骤为1,设置命令码为getimg
 			r301t_autosearch_step = 1;
-			ble_operate_code = GR_FIG_CMD_GETIMG;
+			ble_operate_code = SEARCH_FIG;
 			//指纹模块r301t
 			//发送获取图像命令
 			fig_r301t_send_cmd(0x01, sizeof(r301t_send_getimg_cmd), \

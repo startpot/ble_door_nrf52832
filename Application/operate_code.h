@@ -10,6 +10,9 @@
 #include "ble_nus.h"
 
 
+
+extern bool						is_ble_cmd_exe;//ble命令是否在执行
+
 extern struct tm				time_record;
 extern time_t					time_record_t;
 extern struct tm				time_record_compare;
@@ -34,8 +37,6 @@ extern bool					is_superkey_checked;
 
 extern uint8_t				r301t_autoenroll_step;
 
-extern uint8_t				enroll_fig_info_data[4];//注册指纹信息
-extern uint8_t				delete_fig_info_data[4];//删除指纹信息
 extern uint8_t 				enroll_fig_id[2];
 extern uint8_t				delete_fig_id[2];
 
@@ -85,6 +86,8 @@ extern uint8_t				delete_fig_id[2];
 
 
 void ble_reply(uint8_t operate_code, uint8_t *reply_code, uint16_t reply_code_length);
+void open_fig(void);
+void close_fig(void);
 void operate_code_check(uint8_t *p_data, uint16_t length);
 
 #endif  //OPERATE_CODE_H__

@@ -161,7 +161,7 @@ int main(void) {
 
 	//Initialize
 	timers_init();
-	uart_init();
+//	uart_init();
 	//  buttons_leds_init(&erase_bonds);
 	ble_stack_init();
 	device_manager_init(erase_bonds);

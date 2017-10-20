@@ -22,6 +22,8 @@
 #include "battery.h"
 
 
+bool		is_ble_cmd_exe = false;//ble命令是否在执行
+
 struct tm 	time_record;//读出记录的时间
 time_t 		time_record_t;//读出的时间的int
 struct tm 	time_record_compare;//要对比的时间
@@ -46,8 +48,6 @@ uint8_t				fig_cmd_code;
 bool				is_superkey_checked = false;
 uint8_t				r301t_autoenroll_step = 0;//自动注册的步骤
 
-uint8_t				enroll_fig_info_data[4];//注册指纹信息
-uint8_t				delete_fig_info_data[4];//删除指纹信息
 uint8_t 			enroll_fig_id[2];	//注册指纹的ID号
 uint8_t				delete_fig_id[2];	//删除指纹的ID号
 
@@ -722,10 +722,8 @@ exe_enroll_fig:
 	fig_info_set.is_store = 'w';
 	fig_info_set.fig_info_id = empty_1st_id;
 
-	//4、打开指纹模块电源
-	nrf_gpio_pin_set(BATTERY_LEVEL_EN);
-	//上电需要0.5s的准备时间
-	nrf_delay_ms(1000);
+	//4、打开指纹模
+	open_fig();
 	//5、设置,开始注册,注册步骤为1
 	is_r301t_autoenroll = true;
 	r301t_autoenroll_step = 1;
@@ -766,10 +764,8 @@ exe_delete_fig:
 	memset(delete_fig_id, 0, 2);
 	memcpy(delete_fig_id, &p_data[1], 2);
 
-	//2、打开指纹模块电源
-	nrf_gpio_pin_set(BATTERY_LEVEL_EN);
-	//上电需要0.5s的准备时间
-	nrf_delay_ms(1000);
+	//2、打开指纹模块
+	open_fig();
 	//3、发送删除指纹号命令
 	memset(r301t_send_deletechar_idx_cmd, 0, 5);
 	memcpy(r301t_send_deletechar_idx_cmd, r301t_send_deletechar_id0_cmd, 5);
@@ -819,8 +815,8 @@ static int get_fig_info(uint8_t *p_data, uint16_t length) {
 ***********************/
 static void stop_fig(uint8_t *p_data, uint16_t length) {
 	uint8_t reply_data[1];
-	//1、关闭指纹模块电源
-	nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
+	//1、关闭指纹模块
+	close_fig();
 	//2、初始化指纹模块相关的步骤
 	r301t_autoenroll_step = 0;
 	r301t_autosearch_step = 0;
@@ -840,10 +836,8 @@ static void delete_all_fig(uint8_t *p_data, uint16_t length) {
 	//1.设置指令码为GR_FIG_CMD_EMPTY
 	fig_cmd_code = GR_FIG_CMD_EMPTY;
 	ble_operate_code = p_data[0];
-	//2.打开指纹模块电源
-	nrf_gpio_pin_set(BATTERY_LEVEL_EN);
-	//上电需要0.5s的准备时间
-	nrf_delay_ms(1000);
+	//2.打开指纹模块
+	open_fig();
 	//3.发送删除所有指纹库命令
 	fig_r301t_send_cmd(0x01, sizeof(r301t_send_empty_cmd), \
 	                   r301t_send_empty_cmd);
@@ -857,6 +851,35 @@ void ble_reply(uint8_t operate_code, uint8_t *reply_code, uint16_t reply_code_le
 	nus_data_send[0] = operate_code + 0x40;
 	memcpy(&nus_data_send[1], reply_code, reply_code_length);
 	ble_nus_string_send(&m_nus, nus_data_send, reply_code_length + 1);
+
+}
+
+
+/*********************************
+*打开指纹模块，使能uart
+**********************************/
+void open_fig(void) {
+	//1、打开指纹模块电源
+	nrf_gpio_pin_set(BATTERY_LEVEL_EN);
+	//上电需要0.5s的准备时间
+	nrf_delay_ms(1000);
+	//初始化uart
+	uart_init();
+
+}
+
+
+/*******************************************
+*关闭指纹模块，未使能uart
+********************************************/
+void close_fig(void) {
+	//关闭指纹芯片电源电源
+	nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
+	//设置uart的引脚
+	nrf_gpio_cfg_output(RX_PIN_NUMBER);
+	nrf_gpio_pin_clear(RX_PIN_NUMBER);
+	nrf_gpio_cfg_output(TX_PIN_NUMBER);
+	nrf_gpio_pin_clear(TX_PIN_NUMBER);
 
 }
 
@@ -879,26 +902,34 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 	case '8':
 	case '9':
 		if(length ==0x06) { //6字节
-				sm4_key_check_open(p_data, length);
+			is_ble_cmd_exe = true;
+			sm4_key_check_open(p_data, length);
+			is_ble_cmd_exe = false;
 		}
 		break;
 
 	case SET_SUPER_KEY://设置管理员密码
 		if(length == 0x0d) { //13字节
+			is_ble_cmd_exe = true;
 			set_super_key(p_data, length);
+			is_ble_cmd_exe = false;
 		}
 		break;
 
 	case CHECK_SUPER_KEY://验证超级管理员密码
 		if(length == 0x0d) {
+			is_ble_cmd_exe = true;
 			check_super_key(p_data,length);
+			is_ble_cmd_exe = false;
 		}
 		break;
 
 	case SYNC_TIME://同步时间
 		if(length ==0x08) { //8字节
 			if(is_superkey_checked == true) { //如果验证了超级密码
+				is_ble_cmd_exe = true;
 				sync_rtc_time(p_data, length);
+				is_ble_cmd_exe = false;
 			} else {
 				//向手机发送失败信息"skey check fail"
 				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
@@ -908,13 +939,17 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 		break;
 
 	case GET_TIME://获取时间
+		is_ble_cmd_exe = true;
 		get_rtc_time(p_data, length);
+		is_ble_cmd_exe = false;
 		break;
 
 	case SET_KEY_SEED://写入种子
 		if(length == 0x11) { //17字节
 			if(is_superkey_checked == true) { //如果验证了超级密码
+				is_ble_cmd_exe = true;
 				set_key_seed(p_data, length);
+				is_ble_cmd_exe = false;
 			} else {
 				//向手机发送失败信息"skey check fail"
 				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
@@ -924,13 +959,17 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 		break;
 
 	case GET_KEY_NOW://获取现在的动态密码，后期要注释掉
+		is_ble_cmd_exe = true;
 		get_key_now(p_data, length);
+		is_ble_cmd_exe = false;
 		break;
 
 	case SET_PARAMS://设置参量
 		if(length == 0x7) { //6字节
 			if(is_superkey_checked == true) { //如果验证了超级密码
+				is_ble_cmd_exe = true;
 				set_param(p_data, length);
+				is_ble_cmd_exe = false;
 			} else {
 				//向手机发送失败信息"skey check fail"
 				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
@@ -941,26 +980,36 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 
 	case SET_MAC://配置mac,与显示的mac反向
 		if(length ==0x07) { //7字节
+			is_ble_cmd_exe = true;
 			set_mac(p_data, length);
+			is_ble_cmd_exe = false;
 		}
 		break;
 
-	case GET_MAC://获取mac地址，
+	case GET_MAC://获取mac地址
+		is_ble_cmd_exe = true;
 		get_mac(p_data, length);
+		is_ble_cmd_exe = false;
 		break;
 
 	case GET_BATTERY_LEVEL://获取电池电量
+		is_ble_cmd_exe = true;
 		get_battery_level(p_data, length);
+		is_ble_cmd_exe = false;
 		break;
 
 	case GET_RECORD_NUMBER://查询开门记录数量
+		is_ble_cmd_exe = true;
 		get_record_number(p_data, length);
+		is_ble_cmd_exe = false;
 		break;
 
 	case GET_RECENT_RECORD://查询指定日期后的记录
 		if(length == 0x08) { //8字节
 			if(is_superkey_checked == true) { //如果验证了超级密码
+				is_ble_cmd_exe = true;
 				get_recent_record(p_data, length);
+				is_ble_cmd_exe = false;
 			} else {
 				//向手机发送失败信息"skey check fail"
 				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
@@ -972,7 +1021,9 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 	case SET_TOUCH_KEY://设置触摸按键密码
 		if(length == 9) { //9字节
 			if(is_superkey_checked == true) { //如果验证了超级密码
+				is_ble_cmd_exe = true;
 				set_touch_key(p_data, length);
+				is_ble_cmd_exe = false;
 			} else {
 				//向手机发送失败信息"skey check fail"
 				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
@@ -985,7 +1036,9 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 	case DELETE_TOUCH_KEY://设置触摸按键密码
 		if(length == 3) { //11字节
 			if(is_superkey_checked == true) { //如果验证了超级密码
+				is_ble_cmd_exe = true;
 				delete_touch_key(p_data, length);
+				is_ble_cmd_exe = false;
 			} else {
 				//向手机发送失败信息"skey check fail"
 				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
@@ -997,7 +1050,9 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 
 	case GET_TOUCH_KEY_STORE://查询有效密码
 		if(is_superkey_checked == true) { //如果验证了超级密码
+			is_ble_cmd_exe = true;
 			get_touch_key_store(p_data, length);
+			is_ble_cmd_exe = false;
 		} else {
 			//向手机发送失败信息"skey check fail"
 			ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
@@ -1007,7 +1062,9 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 
 	case USER_UNBIND_CMD: //用户解除绑定
 		if(is_superkey_checked == true) { //如果验证了超级密码
+			is_ble_cmd_exe = true;
 			user_unbind_cmd(p_data, length);
+			is_ble_cmd_exe = false;
 		} else {
 			//向手机发送失败信息"skey check fail"
 			ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
@@ -1018,7 +1075,9 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 	case ENROLL_FIG://注册指纹
 		if(length == 17) {//指令码+描述信息16B
 			if(is_superkey_checked == true) { //如果验证了超级密码
+				is_ble_cmd_exe = true;
 				enroll_fig(p_data, length);
+				is_ble_cmd_exe = false;
 			} else {
 				//向手机发送失败信息"skey check fail"
 				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
@@ -1031,7 +1090,9 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 	case DELETE_FIG://删除指纹
 		if(length == 19) {//指令码+描述信息16B
 			if(is_superkey_checked == true) { //如果验证了超级密码
+				is_ble_cmd_exe = true;
 				delete_fig(p_data, length);
+				is_ble_cmd_exe = false;
 			} else {
 				//向手机发送失败信息"skey check fail"
 				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
@@ -1042,7 +1103,9 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 
 	case GET_FIG_INFO://获取指纹信息
 		if(is_superkey_checked == true) { //如果验证了超级密码
+			is_ble_cmd_exe = true;
 			get_fig_info(p_data, length);
+			is_ble_cmd_exe = false;
 		} else {
 			//向手机发送失败信息"skey check fail"
 			ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
@@ -1052,7 +1115,9 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 
 	case STOP_FIG://停止指纹模块
 		if(is_superkey_checked == true) { //如果验证了超级密码
+			is_ble_cmd_exe = true;
 			stop_fig(p_data, length);
+			is_ble_cmd_exe = false;
 		} else {
 			//向手机发送失败信息"skey check fail"
 			ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
@@ -1061,7 +1126,9 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 		break;
 	case DELETE_ALL_FIG://删除所有指纹信息
 		if(is_superkey_checked == true) { //如果验证了超级密码
+			is_ble_cmd_exe = true;
 			delete_all_fig(p_data, length);
+			is_ble_cmd_exe = false;
 		} else {
 			//向手机发送失败信息"skey check fail"
 			ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
@@ -1072,7 +1139,9 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 	case 0x1B://指纹模块fm260b指令，长度为8，直接通过串口发送给模块
 		if(length == 8) { //长度为8
 			if(is_superkey_checked == true) { //如果验证了超级密码
+				is_ble_cmd_exe = true;
 				send_fig_fm260b_cmd(p_data, length);
+				is_ble_cmd_exe = false;
 			} else {
 				//向手机发送失败信息"skey check fail"
 				ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \

@@ -149,7 +149,7 @@ static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data, uint16_t lengt
 	while(app_uart_put('\n') != NRF_SUCCESS);
 	*/
 	//将获取的数据存到全局变量，供operate_code_check函数用
-	if(operate_code_setted == false) {
+	if(operate_code_setted == false && is_ble_cmd_exe == false) {
 		//不在执行上位机发送的命令
 		for(int i = 0; i <length; i++) {
 			nus_data_recieve[i] = p_data[i];
@@ -281,13 +281,13 @@ static void on_ble_evt(ble_evt_t * p_ble_evt) {
 
 	case BLE_GAP_EVT_AUTH_STATUS:
 		//判断配对是否成功，如果不成功断开连接，从而阻止其他人任意连接
-		if(p_ble_evt->evt.gap_evt.params.auth_status.auth_status != BLE_GAP_SEC_STATUS_SUCCESS) {
-			sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
-		} else {
-#if defined(BLE_DOOR_DEBUG)
-			printf("pair success\r\n");
-#endif
-		}
+		/*		if(p_ble_evt->evt.gap_evt.params.auth_status.auth_status != BLE_GAP_SEC_STATUS_SUCCESS) {
+					sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+				} else {
+		#if defined(BLE_DOOR_DEBUG)
+					printf("pair success\r\n");
+		#endif
+				}*/
 		break;
 
 		/*
