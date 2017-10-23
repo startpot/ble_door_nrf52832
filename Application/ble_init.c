@@ -477,8 +477,8 @@ void advertising_init(void) {
 	ble_adv_modes_config_t options = {0};
 	options.ble_adv_fast_enabled  = BLE_ADV_FAST_ENABLED;
 	options.ble_adv_fast_interval = APP_ADV_INTERVAL;
-//   options.ble_adv_fast_timeout  = APP_ADV_TIMEOUT_IN_SECONDS;
-	options.ble_adv_fast_timeout  = 0;
+   options.ble_adv_fast_timeout  = APP_ADV_TIMEOUT_IN_SECONDS;
+//	options.ble_adv_fast_timeout  = 0;
 
 	err_code = ble_advertising_init(&advdata, &scanrsp, &options, on_adv_evt, NULL);
 	APP_ERROR_CHECK(err_code);

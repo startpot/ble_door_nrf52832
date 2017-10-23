@@ -741,7 +741,7 @@ exe_enroll_fig:
 static int delete_fig(uint8_t *p_data, uint16_t length) {
 //	uint16_t marry_fig_id;//匹配的指纹id
 	uint8_t reply_data[1];
-	uint8_t r301t_send_deletechar_idx_cmd[5];
+//	uint8_t r301t_send_deletechar_idx_cmd[5];
 
 	pstorage_block_identifier_get(&block_id_flash_store, \
 	                              (pstorage_size_t)(FIG_INFO_OFFSET+(p_data[1]*0x100 + p_data[2])), &block_id_fig_info);
@@ -767,8 +767,8 @@ exe_delete_fig:
 	//2、打开指纹模块
 	open_fig();
 	//3、发送删除指纹号命令
-	memset(r301t_send_deletechar_idx_cmd, 0, 5);
-	memcpy(r301t_send_deletechar_idx_cmd, r301t_send_deletechar_id0_cmd, 5);
+	memset(r301t_send_deletechar_idx_cmd, 0, sizeof(r301t_send_deletechar_idx_cmd));
+	memcpy(r301t_send_deletechar_idx_cmd, r301t_send_deletechar_id0_cmd, sizeof(r301t_send_deletechar_idx_cmd));
 	//指定flash指纹ID
 	r301t_send_deletechar_idx_cmd[1] = delete_fig_id[0];
 	r301t_send_deletechar_idx_cmd[2] = delete_fig_id[1];
@@ -843,6 +843,35 @@ static void delete_all_fig(uint8_t *p_data, uint16_t length) {
 	                   r301t_send_empty_cmd);
 }
 
+/****************************************
+*获取指纹模块的有效指纹数量
+****************************************/
+static void get_fig_number(uint8_t *p_data, uint16_t length) {
+	//1.设置指令码为GR_FIG_CMD_VTNUM
+	fig_cmd_code = GR_FIG_CMD_VTNUM;
+	ble_operate_code = p_data[0];
+	//2.打开指纹模块
+	open_fig();
+	//3.发送获取有效模板个数命令
+	fig_r301t_send_cmd(0x01, sizeof(r301t_send_get_vtnum_cmd), \
+	                   r301t_send_get_vtnum_cmd);
+}
+
+/****************************************
+*获取指纹模块的索引表
+****************************************/
+static void get_fig_indextable(uint8_t *p_data, uint16_t length) {
+	//1.设置指令码为GR_FIG_CMD_RDINDEXTB
+	fig_cmd_code = GR_FIG_CMD_RDINDEXTB;
+	ble_operate_code = p_data[0];
+	//2.打开指纹模块
+	open_fig();
+	//3.发送获取指纹模快索引表命令
+	r301t_send_get_indextbx_cmd[1] = p_data[1];
+	fig_r301t_send_cmd(0x01, sizeof(r301t_send_get_indextbx_cmd), \
+	                   r301t_send_get_indextbx_cmd);
+}
+
 /*****************************
 *ble回复函数
 ******************************/
@@ -860,11 +889,12 @@ void ble_reply(uint8_t operate_code, uint8_t *reply_code, uint16_t reply_code_le
 **********************************/
 void open_fig(void) {
 	//1、打开指纹模块电源
+	nrf_gpio_cfg_output(BATTERY_LEVEL_EN);
 	nrf_gpio_pin_set(BATTERY_LEVEL_EN);
 	//上电需要0.5s的准备时间
 	nrf_delay_ms(1000);
 	//初始化uart
-	uart_init();
+//	uart_init();
 
 }
 
@@ -874,12 +904,13 @@ void open_fig(void) {
 ********************************************/
 void close_fig(void) {
 	//关闭指纹芯片电源电源
+	nrf_gpio_cfg_output(BATTERY_LEVEL_EN);
 	nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
 	//设置uart的引脚
-	nrf_gpio_cfg_output(RX_PIN_NUMBER);
+/*	nrf_gpio_cfg_output(RX_PIN_NUMBER);
 	nrf_gpio_pin_clear(RX_PIN_NUMBER);
 	nrf_gpio_cfg_output(TX_PIN_NUMBER);
-	nrf_gpio_pin_clear(TX_PIN_NUMBER);
+	nrf_gpio_pin_clear(TX_PIN_NUMBER);*/
 
 }
 
@@ -1128,6 +1159,28 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 		if(is_superkey_checked == true) { //如果验证了超级密码
 			is_ble_cmd_exe = true;
 			delete_all_fig(p_data, length);
+			is_ble_cmd_exe = false;
+		} else {
+			//向手机发送失败信息"skey check fail"
+			ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+			                    strlen(checked_superkey_false) );
+		}
+		break;
+	case GET_FIG_NUMBER://获取指纹数量
+		if(is_superkey_checked == true) { //如果验证了超级密码
+			is_ble_cmd_exe = true;
+			get_fig_number(p_data, length);
+			is_ble_cmd_exe = false;
+		} else {
+			//向手机发送失败信息"skey check fail"
+			ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+			                    strlen(checked_superkey_false) );
+		}
+		break;
+	case GET_FIG_INDEXTABLE://获取指纹数量
+		if(is_superkey_checked == true) { //如果验证了超级密码
+			is_ble_cmd_exe = true;
+			get_fig_indextable(p_data, length);
 			is_ble_cmd_exe = false;
 		} else {
 			//向手机发送失败信息"skey check fail"

@@ -142,8 +142,14 @@ extern uint8_t		r301t_send_regmodel_cmd[1];
 extern uint8_t		r301t_send_storechar_id0_cmd[4];
 //删除指纹命令
 extern uint8_t		r301t_send_deletechar_id0_cmd[5];
+extern uint8_t 		r301t_send_deletechar_idx_cmd[5];
 //清空指纹库命令
 extern uint8_t		r301t_send_empty_cmd[1];
+//获取有效模板个数
+extern uint8_t		r301t_send_get_vtnum_cmd[1];
+//读取索引列表
+extern uint8_t		r301t_send_get_indextb0_cmd[2];
+extern uint8_t		r301t_send_get_indextbx_cmd[2];
 
 void fig_r301t_send_cmd(uint8_t	data_id, uint16_t data_len, uint8_t	*data_code);
 int fig_r301t_reply_check(void);

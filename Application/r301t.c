@@ -6,6 +6,7 @@
 
 #include "nordic_common.h"
 #include "nrf_gpio.h"
+#include "nrf_delay.h"
 
 #include "app_uart.h"
 
@@ -37,8 +38,14 @@ uint8_t		r301t_send_regmodel_cmd[1] = {0x05};
 uint8_t		r301t_send_storechar_id0_cmd[4] = {0x06, 0x02, 0x00, 0x00};
 //删除指纹命令,这里是ID0
 uint8_t		r301t_send_deletechar_id0_cmd[5] = {0x0c, 0x00, 0x00, 0x00, 0x01};
+uint8_t 	r301t_send_deletechar_idx_cmd[5];
 //清空指纹库命令
 uint8_t		r301t_send_empty_cmd[1] = {0x0d};
+//获取有效模板个数
+uint8_t		r301t_send_get_vtnum_cmd[1] = {0x1d};
+//读取索引列表
+uint8_t		r301t_send_get_indextb_cmd[2] = {0x1f, 0x00};
+uint8_t		r301t_send_get_indextbx_cmd[2] = {0x1f, 0x00};
 
 
 /**********************************************************
@@ -115,7 +122,44 @@ static void send_fig_r301t_reply_data(void) {
 
 }
 
+/***************************************
+*获取指纹模块索引列表的返回包
+***************************************/
+static void send_get_r301t_indextable_reply_data(void) {
+	static uint32_t		send_time;
+	static uint32_t		send_left;
+	//判断返回索引表的字节数(不带校验和)
+	if((fig_recieve_data_length - 12)<=(BLE_NUS_MAX_DATA_LEN - 1)) {
+		//数据长度小于20，一次发完
+		//命令码+0x40
+		nus_data_send[0] = ble_operate_code + 0x40;
+		memcpy(&nus_data_send[1],&fig_recieve_data[10], (fig_recieve_data_length -12));
+		nus_data_send_length = (fig_recieve_data_length - 12);
+		ble_nus_string_send(&m_nus,nus_data_send, (nus_data_send_length -12));
+	} else {
+		//计算一共发送几次整的20字节
+		send_time = (fig_recieve_data_length - 12)/ (BLE_NUS_MAX_DATA_LEN - 1);
+		send_left = (fig_recieve_data_length - 12) % (BLE_NUS_MAX_DATA_LEN - 1);
 
+		//发送整20字节的
+		for(int i=0; i<send_time; i++) {
+			//命令码+0x40
+			nus_data_send[0] = ble_operate_code + 0x40;
+			memcpy(&nus_data_send[1],&fig_recieve_data[ 10 + i*(BLE_NUS_MAX_DATA_LEN - 1)], (BLE_NUS_MAX_DATA_LEN - 1));
+			nus_data_send_length = BLE_NUS_MAX_DATA_LEN;
+			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+		}
+		//发送剩余的字节
+		if(send_left >0) {
+			//命令码+0x40
+			nus_data_send[0] = ble_operate_code + 0x40;
+			memcpy(&nus_data_send[1],&fig_recieve_data[10 + send_time * (BLE_NUS_MAX_DATA_LEN - 1)], send_left);
+			nus_data_send_length = send_left + 1;
+			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+		}
+	}
+
+}
 
 /*********************************************
 *指纹模块的应答处理
@@ -171,6 +215,41 @@ redelete_fig_info:
 		nus_data_send[1] = 0x00;
 		nus_data_send_length = 2;
 		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+		break;
+
+	case GR_FIG_CMD_VTNUM:
+		//关闭指纹芯片
+		close_fig();
+		//返回包
+		nus_data_send[0] = ble_operate_code + 0x40;
+		nus_data_send[1] = fig_recieve_data[9];
+		nus_data_send[2] = fig_recieve_data[10];
+		nus_data_send[3] = fig_recieve_data[11];
+		nus_data_send_length = 4;
+		ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+		break;
+	case GR_FIG_CMD_RDINDEXTB:
+		//关闭指纹芯片
+		close_fig();
+		if(fig_recieve_data[9] == 0x00) {
+			//发送索引表
+			send_get_r301t_indextable_reply_data();
+			//结束包
+			nus_data_send[0] = ble_operate_code + 0x40;
+			nus_data_send[1] = 0;
+			nus_data_send[2] = 0;
+			nus_data_send[3] = 0;
+			nus_data_send[3] = 0;
+			nus_data_send_length = 5;
+			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+
+		} else {
+			//返回包，错误
+			nus_data_send[0] = ble_operate_code + 0x40;
+			nus_data_send[1] = fig_recieve_data[9];
+			nus_data_send_length = 2;
+			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+		}
 		break;
 
 	default:
@@ -230,6 +309,14 @@ redelete_fig_info:
 				//最后一步，判断结果
 				if(fig_recieve_data[9] == 0) {
 					//返回搜索到了指纹
+					//向上位机发送匹配的ID号和匹配得分
+					nus_data_send[0] = SEARCH_FIG + 0x40;
+					nus_data_send[1] = fig_recieve_data[10];
+					nus_data_send[2] = fig_recieve_data[11];
+					nus_data_send[3] = fig_recieve_data[12];
+					nus_data_send[4] = fig_recieve_data[13];
+					nus_data_send_length = 5;
+					ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 					//打开门
 					ble_door_open();
 					//TODO记录指纹开锁
@@ -349,6 +436,7 @@ restore_fig_info:
 						if(err_code != 0) {
 							goto restore_fig_info;
 						}
+						//				nrf_delay_ms(2000);
 					} else {
 						nus_data_send[1] = 0x01;
 						nus_data_send_length = 2;

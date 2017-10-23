@@ -26,6 +26,8 @@
 #define	WT5700_SENSOR_DATA1			0x09
 
 /********************************************/
+ret_code_t wt5700_i2c_write_byte(uint8_t address, uint8_t data);
+ret_code_t wt5700_i2c_read_byte(uint8_t address, uint8_t *p_read_byte, uint8_t length);
 
 void wt5700_init(void);
 uint8_t wt5700_key_read(void);

@@ -40,6 +40,12 @@
 #include "app_util_platform.h"
 #include "uicr_config.h"
 
+//设置nfc引脚为gpio
+#define CONFIG_NFCT_PINS_AS_GPIOS
+#include "nrf52.h"
+#include "system_nrf52.h"
+
+
 #include "led_button.h"
 //#include "touch_tsm12.h"
 #include "wt5700.h"
@@ -161,7 +167,7 @@ int main(void) {
 
 	//Initialize
 	timers_init();
-//	uart_init();
+	uart_init();
 	//  buttons_leds_init(&erase_bonds);
 	ble_stack_init();
 	device_manager_init(erase_bonds);
@@ -182,7 +188,7 @@ int main(void) {
 	//初始化灯，拉高，灭
 	leds_init();
 //	led test
-	leds_on(LED_13,5);
+//	leds_on(LED_13,5);
 
 
 

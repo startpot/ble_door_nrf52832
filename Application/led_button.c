@@ -81,7 +81,7 @@ void leds_init(void) {
 	nrf_gpio_cfg_output(TOUCH_IIC_EN_PIN);
 	nrf_gpio_pin_clear(TOUCH_IIC_EN_PIN);
 	//设置NFC引脚
-	nrf_gpio_cfg_output(NFC_A_PIN);
+/*	nrf_gpio_cfg_output(NFC_A_PIN);
 	nrf_gpio_pin_clear(NFC_A_PIN);
 	nrf_gpio_cfg_output(NFC_B_PIN);
 	nrf_gpio_pin_clear(NFC_B_PIN);
@@ -89,8 +89,10 @@ void leds_init(void) {
 	nrf_gpio_cfg_output(RX_PIN_NUMBER);
 	nrf_gpio_pin_clear(RX_PIN_NUMBER);
 	nrf_gpio_cfg_output(TX_PIN_NUMBER);
-	nrf_gpio_pin_clear(TX_PIN_NUMBER);
-
+	nrf_gpio_pin_clear(TX_PIN_NUMBER);*/
+	//无用的引脚24
+	nrf_gpio_cfg_output(24);
+	nrf_gpio_pin_clear(24);
 
 }
 
@@ -459,12 +461,20 @@ static void touch_finger_int_handler(uint32_t event_pins_low_to_high, uint32_t e
 	//触摸按键中断响应
 	if (event_pins_high_to_low & (1 << TOUCH_IIC_INT_PIN)) {
 		//触摸中断由高变低
+		
+		//1、开启触摸芯片
+	//	uint8_t set_data = 0x32;//62
+	//	wt5700_i2c_write_byte(WT5700_SYS_CTL, set_data);
+		//2、读取触摸按键
 		//	key_express_value = (char)tsm12_key_read();
 		if(is_key_value_get !=true) {
 			key_express_value = (char)wt5700_key_read();
 			check_key_express(key_express_value);
 		}
 		is_key_value_get = false;
+		//3、设置触摸芯片低功耗
+	//	set_data = 0x33;
+	//	wt5700_i2c_write_byte(WT5700_SYS_CTL, set_data);
 	}
 	//指纹中断响应
 	if (event_pins_high_to_low & (1 << FIG_WAKE_N_PIN)) {

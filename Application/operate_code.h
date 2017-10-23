@@ -83,7 +83,8 @@ extern uint8_t				delete_fig_id[2];
 #define GET_FIG_INFO			0xA3	//获取指纹信息
 #define STOP_FIG				0xA4	//停止指纹模块
 #define DELETE_ALL_FIG			0xA5	//删除所有指纹
-
+#define	GET_FIG_NUMBER			0xA6	//读取指纹个数
+#define	GET_FIG_INDEXTABLE		0xA7	//读取指纹模块存储的指纹信息
 
 void ble_reply(uint8_t operate_code, uint8_t *reply_code, uint16_t reply_code_length);
 void open_fig(void);

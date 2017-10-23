@@ -47,7 +47,7 @@ static ret_code_t touch_iic_init(void) {
 		data			数据
 *out：	ret			0成功
 ****************************************/
-static ret_code_t wt5700_i2c_write_byte(uint8_t address, uint8_t data) {
+ret_code_t wt5700_i2c_write_byte(uint8_t address, uint8_t data) {
 	ret_code_t ret;
 	uint8_t buffer[3] = {0x00,address,data};
 	ret = nrf_drv_twi_tx(&m_twi_master_wt5700, WT5700_IIC_REAL_ADDR, buffer, 3, false);
@@ -62,7 +62,7 @@ static ret_code_t wt5700_i2c_write_byte(uint8_t address, uint8_t data) {
 			length				读出数据的长度
 *out：	ret			0成功
 **************************************************************/
-static ret_code_t wt5700_i2c_read_byte(uint8_t address, uint8_t *p_read_byte, uint8_t length) {
+ret_code_t wt5700_i2c_read_byte(uint8_t address, uint8_t *p_read_byte, uint8_t length) {
 	ret_code_t ret;
 
 	do {
@@ -89,8 +89,8 @@ void wt5700_init(void) {
 
 	touch_iic_init();
 
-	//
-	set_data = 0x62;
+	//设置为slow down model
+	set_data = 0x12;//62
 	wt5700_i2c_write_byte(WT5700_SYS_CTL, set_data);
 
 	//将芯片设置成单触摸模式,1/2win sense

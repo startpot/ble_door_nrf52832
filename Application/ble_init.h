@@ -29,8 +29,8 @@
 // UUID type for the Nordic UART Service (vendor specific)，主要是可以用官方的APP测试
 #define NUS_SERVICE_UUID_TYPE				BLE_UUID_TYPE_VENDOR_BEGIN
 
-#define APP_ADV_INTERVAL					64 //广播间隔(0.625 ms * 400 = 250 ms)，广播间隔越大，越省电
-#define APP_ADV_TIMEOUT_IN_SECONDS			180 //广播超时，单位s
+#define APP_ADV_INTERVAL					64 //广播间隔(0.625 ms * 64 = 40 ms)，广播间隔越大，越省电
+#define APP_ADV_TIMEOUT_IN_SECONDS			30//180 //广播超时，单位s
 
 #define APP_TIMER_PRESCALER					0 // Value of the RTC1 PRESCALER register
 #define APP_TIMER_OP_QUEUE_SIZE				5 //Size of timer operation queues
