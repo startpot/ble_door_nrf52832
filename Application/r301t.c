@@ -36,6 +36,7 @@ uint8_t		r301t_send_search_cmd[6] = {0x04, 0x01, 0x00, 0x00, 0x00, 0x20};
 uint8_t		r301t_send_regmodel_cmd[1] = {0x05};
 //将特征缓冲区的文件储存在flash指纹库这里是ID0
 uint8_t		r301t_send_storechar_id0_cmd[4] = {0x06, 0x02, 0x00, 0x00};
+uint8_t	r301t_send_storechar_idx_cmd[4];
 //删除指纹命令,这里是ID0
 uint8_t		r301t_send_deletechar_id0_cmd[5] = {0x0c, 0x00, 0x00, 0x00, 0x01};
 uint8_t 	r301t_send_deletechar_idx_cmd[5];
@@ -166,7 +167,6 @@ static void send_get_r301t_indextable_reply_data(void) {
 *********************************************/
 int fig_r301t_reply_check(void) {
 	int err_code;
-	uint8_t	r301t_send_storechar_idx_cmd[4];
 	uint8_t fig_input[6];
 
 	//send_fig_r301t_reply_data();

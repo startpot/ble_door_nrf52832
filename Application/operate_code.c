@@ -411,7 +411,7 @@ static void get_mac(uint8_t *p_data, uint16_t length) {
 }
 
 /***************************************************
-*获取电池电量 0x2c~~5.0V 0x36~~6.0V ，大致1~~~0.1V
+*获取电池电量，大致1~~~0.1V
 ****************************************************/
 static void get_battery_level(uint8_t *p_data, uint16_t length) {
 	uint8_t tmp;
@@ -429,6 +429,7 @@ static void get_battery_level(uint8_t *p_data, uint16_t length) {
 	//将命令加上0x40,返回给app
 	nus_data_send[0] = p_data[0] + 0x40;
 	memcpy(&nus_data_send[1], &tmp, 1);
+	nus_data_send[1] = nus_data_send[1] + 6;
 	nus_data_send_length = 2;
 	ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 
@@ -1177,15 +1178,17 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 			                    strlen(checked_superkey_false) );
 		}
 		break;
-	case GET_FIG_INDEXTABLE://获取指纹数量
-		if(is_superkey_checked == true) { //如果验证了超级密码
-			is_ble_cmd_exe = true;
-			get_fig_indextable(p_data, length);
-			is_ble_cmd_exe = false;
-		} else {
+	case GET_FIG_INDEXTABLE://获取指纹的索引码
+		if(length == 2){
+			if(is_superkey_checked == true ) { //如果验证了超级密码
+				is_ble_cmd_exe = true;
+				get_fig_indextable(p_data, length);
+				is_ble_cmd_exe = false;
+			} else {
 			//向手机发送失败信息"skey check fail"
 			ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
 			                    strlen(checked_superkey_false) );
+			}
 		}
 		break;
 

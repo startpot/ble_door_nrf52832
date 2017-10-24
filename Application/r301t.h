@@ -140,6 +140,7 @@ extern uint8_t		r301t_send_search_cmd[6];
 extern uint8_t		r301t_send_regmodel_cmd[1];
 //将特征缓冲区的文件储存在flash指纹库这里是ID0
 extern uint8_t		r301t_send_storechar_id0_cmd[4];
+extern uint8_t	r301t_send_storechar_idx_cmd[4];
 //删除指纹命令
 extern uint8_t		r301t_send_deletechar_id0_cmd[5];
 extern uint8_t 		r301t_send_deletechar_idx_cmd[5];

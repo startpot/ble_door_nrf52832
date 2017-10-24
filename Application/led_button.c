@@ -420,7 +420,7 @@ static void check_key_express(char express_value) {
 			beep_didi(1);
 			clear_key_expressed();
 		}
-	} else {
+	} else if(express_value !=0){
 		write_key_expressed();
 	}
 
@@ -463,17 +463,19 @@ static void touch_finger_int_handler(uint32_t event_pins_low_to_high, uint32_t e
 		//触摸中断由高变低
 		
 		//1、开启触摸芯片
-	//	uint8_t set_data = 0x32;//62
+	//	uint8_t set_data = 0x62;//62
 	//	wt5700_i2c_write_byte(WT5700_SYS_CTL, set_data);
 		//2、读取触摸按键
 		//	key_express_value = (char)tsm12_key_read();
-		if(is_key_value_get !=true) {
-			key_express_value = (char)wt5700_key_read();
-			check_key_express(key_express_value);
-		}
+		is_key_value_get = true;
+		key_express_value = (char)wt5700_key_read();
 		is_key_value_get = false;
+		if(key_express_value != 0){
+				check_key_express(key_express_value);
+			}
+	
 		//3、设置触摸芯片低功耗
-	//	set_data = 0x33;
+	//	set_data = 0x52;
 	//	wt5700_i2c_write_byte(WT5700_SYS_CTL, set_data);
 	}
 	//指纹中断响应

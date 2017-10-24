@@ -90,15 +90,15 @@ void wt5700_init(void) {
 	touch_iic_init();
 
 	//设置为slow down model
-	set_data = 0x12;//62
+	set_data = 0x72;//62
 	wt5700_i2c_write_byte(WT5700_SYS_CTL, set_data);
 
 	//将芯片设置成单触摸模式,1/2win sense
-	set_data = 0xc2; //c7
+	set_data = 0x02; //c2
 	wt5700_i2c_write_byte(WT5700_SYS_CTL02, set_data);
 
 	//
-	set_data = 0x02; //07
+	set_data = 0x02; //02
 	wt5700_i2c_write_byte(WT5700_SYS_CTL03, set_data);
 
 #if defined(BLE_DOOR_DEBUG)
@@ -114,13 +114,11 @@ void wt5700_init(void) {
 ***************************************************/
 uint8_t wt5700_key_read(void) {
 
-	uint8_t wt5700_key_value;
+	uint8_t wt5700_key_value = 0;
 	uint8_t wt5700_temp[2];
 	uint8_t *p;
 
 	p = wt5700_temp;
-
-	is_key_value_get = true;
 
 	if(is_key_value_get == true) {
 		//读取通道8-11
