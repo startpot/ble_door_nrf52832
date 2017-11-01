@@ -18,6 +18,7 @@
 #include "app_uart.h"
 
 #include "led_button.h"
+#include "ble_init.h"
 //#include "touch_tsm12.h"
 #include "wt5700.h"
 #include "moto.h"
@@ -58,6 +59,8 @@ bool		key_input_checked_locked = false;
 ///开锁记录全局变量
 struct door_open_record		open_record_now;
 
+bool			is_background_lit = false;
+
 /***********************************************
  *初始化LED pins
  * 设置LED PINS high(led light when pin is low)
@@ -81,15 +84,10 @@ void leds_init(void) {
 	nrf_gpio_cfg_output(TOUCH_IIC_EN_PIN);
 	nrf_gpio_pin_clear(TOUCH_IIC_EN_PIN);
 	//设置NFC引脚
-/*	nrf_gpio_cfg_output(NFC_A_PIN);
-	nrf_gpio_pin_clear(NFC_A_PIN);
-	nrf_gpio_cfg_output(NFC_B_PIN);
-	nrf_gpio_pin_clear(NFC_B_PIN);
-	//设置uart的引脚
-	nrf_gpio_cfg_output(RX_PIN_NUMBER);
-	nrf_gpio_pin_clear(RX_PIN_NUMBER);
-	nrf_gpio_cfg_output(TX_PIN_NUMBER);
-	nrf_gpio_pin_clear(TX_PIN_NUMBER);*/
+	/*	nrf_gpio_cfg_output(NFC_A_PIN);
+		nrf_gpio_pin_clear(NFC_A_PIN);
+		nrf_gpio_cfg_output(NFC_B_PIN);
+		nrf_gpio_pin_clear(NFC_B_PIN);*/
 	//无用的引脚24
 	nrf_gpio_cfg_output(24);
 	nrf_gpio_pin_clear(24);
@@ -400,13 +398,10 @@ static void check_key_express(char express_value) {
 	//判断按键，亮相应的灯
 	for(int i=0; i< (LEDS_NUMBER-1); i++) {
 		if(board_buttons[i] == express_value) {
-			//leds_on(board_leds[i], LED_LIGHT_TIME);
-			//设置引脚为输出，置低
-			nrf_gpio_pin_set( BATTERY_LEVEL_EN );
-			nrf_delay_ms(500);
-			nrf_gpio_pin_clear( BATTERY_LEVEL_EN );
+			//	leds_on(board_leds[i], LED_LIGHT_TIME);
 			//蜂鸣器响1声
 			beep_didi(1);
+			write_key_expressed();
 		}
 	}
 	//如果按键是'b'，检验所有按键，其他键则记录下来
@@ -420,8 +415,6 @@ static void check_key_express(char express_value) {
 			beep_didi(1);
 			clear_key_expressed();
 		}
-	} else if(express_value !=0){
-		write_key_expressed();
 	}
 
 }
@@ -461,22 +454,19 @@ static void touch_finger_int_handler(uint32_t event_pins_low_to_high, uint32_t e
 	//触摸按键中断响应
 	if (event_pins_high_to_low & (1 << TOUCH_IIC_INT_PIN)) {
 		//触摸中断由高变低
-		
-		//1、开启触摸芯片
-	//	uint8_t set_data = 0x62;//62
-	//	wt5700_i2c_write_byte(WT5700_SYS_CTL, set_data);
+		//1、开启背景灯
+		if(is_background_lit == false) {
+			nrf_gpio_pin_set( BATTERY_LEVEL_EN );
+			is_background_lit = true;
+			//	app_timer_start(m_backlit_timer_id, BACKGROUND_LIT_DELAY, NULL);
+		}
 		//2、读取触摸按键
-		//	key_express_value = (char)tsm12_key_read();
 		is_key_value_get = true;
 		key_express_value = (char)wt5700_key_read();
 		is_key_value_get = false;
-		if(key_express_value != 0){
-				check_key_express(key_express_value);
-			}
-	
-		//3、设置触摸芯片低功耗
-	//	set_data = 0x52;
-	//	wt5700_i2c_write_byte(WT5700_SYS_CTL, set_data);
+		if(key_express_value != 0) {
+			check_key_express(key_express_value);
+		}
 	}
 	//指纹中断响应
 	if (event_pins_high_to_low & (1 << FIG_WAKE_N_PIN)) {

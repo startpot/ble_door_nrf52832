@@ -33,10 +33,11 @@
 #define APP_ADV_TIMEOUT_IN_SECONDS			30//180 //广播超时，单位s
 
 #define APP_TIMER_PRESCALER					0 // Value of the RTC1 PRESCALER register
-#define APP_TIMER_OP_QUEUE_SIZE				5 //Size of timer operation queues
+#define APP_TIMER_MAX_TIMERS            	4
+#define APP_TIMER_OP_QUEUE_SIZE				4 //Size of timer operation queues
 
 #define SECURITY_REQUEST_DELAY				APP_TIMER_TICKS(4000, APP_TIMER_PRESCALER)		//配对定时器时间间隔：4000MS
-#define AD_REPEAT_DELAY						APP_TIMER_TICKS(40000,APP_TIMER_PRESCALER)	//重复广播时间间隔：40000MS
+#define BACKGROUND_LIT_DELAY				APP_TIMER_TICKS(1000,APP_TIMER_PRESCALER)	//重复背景灯时间间隔：1000MS
 
 
 #define MIN_CONN_INTERVAL					MSEC_TO_UNITS(20, UNIT_1_25_MS)
@@ -57,11 +58,17 @@
 #define SEC_PARAM_MAX_KEY_SIZE				16
 
 //配对定时器
-APP_TIMER_DEF(m_sec_req_timer_id);
-//重复广播的定时器
-APP_TIMER_DEF(m_ad_repeat_timer_id);
+//APP_TIMER_DEF(m_sec_req_timer_id);
+//开启背景灯的定时器
+APP_TIMER_DEF(m_backlit_timer_id);
 
 #define DEAD_BEEF																								0xDEADBEEF
+
+//广播设备类型(外设种类)
+#define BIT_TOUCH		BIT_0
+#define	BIT_FIG			BIT_1
+
+
 
 //#define APP_FEATURE_NOT_SUPPORTED      	BLE_GATT_STATUS_ATTERR_APP_BEGIN + 2
 
@@ -71,6 +78,7 @@ APP_TIMER_DEF(m_ad_repeat_timer_id);
 
 extern ble_nus_t				m_nus; /*Nordic UART Service*/
 extern uint16_t					m_conn_handle;
+//extern app_timer_id_t			m_backlit_timer_id;
 
 extern uint8_t					mac[8];//第一位：标志位，第二位：长度
 

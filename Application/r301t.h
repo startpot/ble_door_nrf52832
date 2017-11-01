@@ -124,6 +124,10 @@
 extern bool		is_r301t_autoenroll;
 extern uint8_t 	r301t_autosearch_step;
 
+extern uint8_t	r301t_indextable_data[32];
+extern bool		is_get_r301t_indextable;
+extern uint8_t	fig_info_get_site;
+
 
 /**************************************
 *r301t指纹模块相关指令

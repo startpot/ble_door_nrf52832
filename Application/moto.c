@@ -52,7 +52,7 @@ static void moto_forward_ms(uint32_t ms) {
 	//设置为stand-by状态
 	nrf_gpio_pin_clear(MOTO_FI);
 	nrf_gpio_pin_clear(MOTO_BI);
-	
+
 }
 
 /***************************************************

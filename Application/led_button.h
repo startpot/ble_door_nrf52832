@@ -38,6 +38,8 @@ extern bool			key_input_checked_locked;
 
 extern struct door_open_record		open_record_now;
 
+extern bool			is_background_lit;
+
 #define BUTTON_DETECTION_DELAY		APP_TIMER_TICKS(50, APP_TIMER_PRESCALER)
 
 void leds_init(void);

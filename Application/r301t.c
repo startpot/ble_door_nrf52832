@@ -23,6 +23,10 @@
 bool		is_r301t_autoenroll = false;
 uint8_t 	r301t_autosearch_step = 0;
 
+uint8_t		r301t_indextable_data[32];
+bool		is_get_r301t_indextable = false;
+uint8_t		fig_info_get_site;
+
 
 //发送获取指纹图像命令
 uint8_t		r301t_send_getimg_cmd[1] = {0x01};
@@ -162,12 +166,72 @@ static void send_get_r301t_indextable_reply_data(void) {
 
 }
 
+/***********************************************
+*获取指纹信息索引列表
+***********************************************/
+static void get_r301t_indextable_data(void) {
+	//1获取指纹模块返回信息
+	memset(r301t_indextable_data, 0, sizeof(r301t_indextable_data));
+	memcpy(r301t_indextable_data, &fig_recieve_data[10],sizeof(r301t_indextable_data));
+	//2设置标志量
+	is_get_r301t_indextable = true;
+
+}
+
+/*******************************************
+*同步指纹模块
+********************************************/
+static void updata_fig_info(void) {
+	for(int i=0; i < (FIG_INFO_NUMBER/8); i++) {
+		for(int j=0; j < 8; j++) {
+			//1、如果指纹ID号有指纹则写信息
+			if( ((r301t_indextable_data[i] &(uint8_t)(0x01 <<j)) >> j) == 1) {
+				//1.1、获取查询的ID号
+				fig_info_get_site = i*8 + j;
+
+				//1.2、获取内部flash存储区的信息
+				pstorage_block_identifier_get(&block_id_flash_store, \
+				                              (pstorage_size_t)(FIG_INFO_OFFSET + fig_info_get_site), &block_id_fig_info);
+				pstorage_load(interflash_read_data, &block_id_fig_info, BLOCK_STORE_SIZE, 0);
+				memset(&fig_info_get, 0, sizeof(struct fig_info));
+				memcpy(&fig_info_get, interflash_read_data, sizeof(struct fig_info));
+
+				if(fig_info_get.is_store != 'w') {
+					//1.3、如果没有记录,则写入记录信息
+					//1.3.1、设置信息
+					memset(&fig_info_set, 0, sizeof(struct fig_info));
+					fig_info_set.is_store = 'w';
+					fig_info_set.fig_info_id = fig_info_get_site;
+					//1.3.2、清除区域
+					pstorage_clear(&block_id_fig_info, BLOCK_STORE_SIZE);
+					//1.3.3、存储信息
+					memset(interflash_write_data, 0, BLOCK_STORE_SIZE);
+					memcpy(interflash_write_data, &fig_info_set, sizeof(struct fig_info));
+					pstorage_store(&block_id_fig_info, interflash_write_data, BLOCK_STORE_SIZE, 0);
+					//拷贝设置的信息
+					memcpy(&fig_info_get, &fig_info_set, sizeof(struct fig_info));
+				}
+				//写了指纹信息,将指令码+40，再把指纹信息返回给上位机
+				nus_data_send[0] = ble_operate_code + 0x40;
+				nus_data_send[1] = fig_info_get.fig_info_id / 0x100;
+				nus_data_send[2] = fig_info_get.fig_info_id &0xff;
+				memcpy(&nus_data_send[3], fig_info_get.fig_info_data, sizeof(fig_info_get.fig_info_data));
+				nus_data_send_length = 3+sizeof(fig_info_get.fig_info_data);
+				ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+			}
+		}
+	}
+	fig_info_get_site = 0;
+}
+
 /*********************************************
 *指纹模块的应答处理
 *********************************************/
 int fig_r301t_reply_check(void) {
 	int err_code;
 	uint8_t fig_input[6];
+
+	uint8_t end_reply[4] = {0, 0, 0, 0};
 
 	//send_fig_r301t_reply_data();
 	//判断发送包的指令码
@@ -201,16 +265,16 @@ redelete_fig_info:
 		break;
 
 	case GR_FIG_CMD_EMPTY:
-		//关闭指纹芯片
+		//1、关闭指纹芯片
 		close_fig();
 
-		//清除所有指纹库信息
+		//2、清除所有指纹库信息
 		for(int i = 0; i <FIG_INFO_NUMBER; i++) {
 			pstorage_block_identifier_get(&block_id_flash_store, \
 			                              (pstorage_size_t)(FIG_INFO_OFFSET+ i), &block_id_fig_info);
 			pstorage_clear(&block_id_fig_info, BLOCK_STORE_SIZE);
 		}
-		//返回包
+		//3、返回包
 		nus_data_send[0] = ble_operate_code + 0x40;
 		nus_data_send[1] = 0x00;
 		nus_data_send_length = 2;
@@ -232,23 +296,37 @@ redelete_fig_info:
 		//关闭指纹芯片
 		close_fig();
 		if(fig_recieve_data[9] == 0x00) {
-			//发送索引表
-			send_get_r301t_indextable_reply_data();
-			//结束包
-			nus_data_send[0] = ble_operate_code + 0x40;
-			nus_data_send[1] = 0;
-			nus_data_send[2] = 0;
-			nus_data_send[3] = 0;
-			nus_data_send[3] = 0;
-			nus_data_send_length = 5;
-			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 
-		} else {
-			//返回包，错误
-			nus_data_send[0] = ble_operate_code + 0x40;
-			nus_data_send[1] = fig_recieve_data[9];
-			nus_data_send_length = 2;
-			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+			get_r301t_indextable_data();
+updata_fig_info_label:
+			//2、同步指纹信息
+			if(is_get_r301t_indextable ==true) {
+				updata_fig_info();
+				is_get_r301t_indextable = false;
+			} else {
+				goto updata_fig_info_label;
+			}
+			//3、获取flash中的指纹信息
+			/*		for(int i = 0; i < FIG_INFO_NUMBER; i++) {
+						//1.1、获取内部flash存储区的信息
+						pstorage_block_identifier_get(&block_id_flash_store, \
+						                              (pstorage_size_t)(FIG_INFO_OFFSET+i), &block_id_fig_info);
+						pstorage_load(interflash_read_data, &block_id_fig_info, BLOCK_STORE_SIZE, 0);
+						memset(&fig_info_get, 0, sizeof(struct fig_info));
+						memcpy(&fig_info_get, interflash_read_data, sizeof(struct fig_info));
+
+						if(fig_info_get.is_store == 'w') {
+							//写了指纹信息,将指令码+40，再把指纹信息返回给上位机
+							nus_data_send[0] = ble_operate_code + 0x40;
+							nus_data_send[1] = fig_info_get.fig_info_id / 0x100;
+							nus_data_send[2] = fig_info_get.fig_info_id &0xff;
+							memcpy(&nus_data_send[3], fig_info_get.fig_info_data, sizeof(fig_info_get.fig_info_data));
+							nus_data_send_length = 3+sizeof(fig_info_get.fig_info_data);
+							ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
+						}
+					}*/
+			//4、结束包
+			ble_reply(ble_operate_code, end_reply, sizeof(end_reply));
 		}
 		break;
 

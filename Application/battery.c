@@ -17,7 +17,7 @@
 #include "set_params.h"
 
 volatile uint8_t state = 1;
-static const nrf_drv_timer_t  m_timer = NRF_DRV_TIMER_INSTANCE(1); //因为使用了协议栈，不能使用定时器0
+static const nrf_drv_timer_t  m_timer = NRF_DRV_TIMER_INSTANCE(3); //因为使用了协议栈，不能使用定时器0
 static nrf_ppi_channel_t m_ppi_channel;
 static uint32_t m_adc_evt_counter;
 

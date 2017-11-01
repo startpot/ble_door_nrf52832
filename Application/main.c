@@ -226,6 +226,11 @@ int main(void) {
 			operate_code_check(nus_data_recieve, nus_data_recieve_length);
 			operate_code_setted = false;
 		}
+		if(is_background_lit == true){
+			nrf_delay_ms(3000);
+			nrf_gpio_pin_clear( BATTERY_LEVEL_EN );
+			is_background_lit = false;
+		}
 	}
 
 }

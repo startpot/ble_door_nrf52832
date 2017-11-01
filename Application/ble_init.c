@@ -9,6 +9,7 @@
 #include "nrf_delay.h"
 #include "nrf_gpio.h"
 #include "nrf_drv_config.h"
+#include "nrf_drv_timer.h"
 
 #include "ble_hci.h"
 #include "ble_dis.h"
@@ -35,6 +36,7 @@
 
 dm_application_instance_t		m_app_handle;
 dm_handle_t                    	m_dm_handle;
+//app_timer_id_t					m_backlit_timer_id;
 
 ble_uuid_t						m_adv_uuids[] = {{BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}};
 
@@ -55,7 +57,9 @@ uint32_t	nus_data_send_length = 0;
 uint8_t		fig_recieve_data[UART_RX_BUF_SIZE];
 uint16_t	fig_recieve_data_length = 0;
 
-
+/********************
+*回调函数
+*******************/
 void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name) {
 	app_error_handler(DEAD_BEEF, line_num, p_file_name);
 }
@@ -81,7 +85,19 @@ static void sec_req_timeout_handler(void * p_context) {
 
 }
 
+/***************************************
+*背景灯定时器任务处理函数
+****************************************/
+static void backlit_timeout_handler(void * p_context) {
+	//UNUSED_PARAMETER(p_context);
+	if(is_background_lit == true) {
+		//关闭背景灯
+		nrf_gpio_pin_clear( BATTERY_LEVEL_EN );
+		//设置标识位
+		is_background_lit = false;
+	}
 
+}
 
 /*********************************
 *初始化timers
@@ -94,9 +110,15 @@ void timers_init(void) {
 
 	// Create timers.
 	// Create Security Request timer.
-	err_code = app_timer_create(&m_sec_req_timer_id,
+	/*	err_code = app_timer_create(&m_sec_req_timer_id,
+		APP_TIMER_MODE_SINGLE_SHOT,
+		sec_req_timeout_handler);
+		APP_ERROR_CHECK(err_code);
+		*/
+	//初始化背景灯定时器
+	err_code = app_timer_create(&m_backlit_timer_id,
 	APP_TIMER_MODE_SINGLE_SHOT,
-	sec_req_timeout_handler);
+	backlit_timeout_handler);
 	APP_ERROR_CHECK(err_code);
 
 }
@@ -443,9 +465,8 @@ void advertising_init(void) {
 	ble_advdata_t scanrsp;
 	ble_advdata_manuf_data_t manuf_data; //自定义厂商数据，这里为mac
 
-	uint8_t device_hard_info = 0x03;
-//	uint8_t device_mac[6];
-	uint8_t device_info[7];//设备信息6位mac地址+硬件版本号
+	uint8_t device_hard_info = BIT_TOUCH | BIT_FIG;
+	uint8_t device_info[BLE_GAP_ADDR_LEN + 1];//设备信息6位mac地址+硬件版本号
 
 	memset(&advdata, 0, sizeof(advdata));
 
@@ -477,7 +498,7 @@ void advertising_init(void) {
 	ble_adv_modes_config_t options = {0};
 	options.ble_adv_fast_enabled  = BLE_ADV_FAST_ENABLED;
 	options.ble_adv_fast_interval = APP_ADV_INTERVAL;
-   options.ble_adv_fast_timeout  = APP_ADV_TIMEOUT_IN_SECONDS;
+	options.ble_adv_fast_timeout  = APP_ADV_TIMEOUT_IN_SECONDS;
 //	options.ble_adv_fast_timeout  = 0;
 
 	err_code = ble_advertising_init(&advdata, &scanrsp, &options, on_adv_evt, NULL);
@@ -509,8 +530,6 @@ void adverts_start(void) {
 	err_code = sd_ble_gap_adv_start(&adv_params);
 	APP_ERROR_CHECK(err_code);
 }
-
-
 
 static void bsp_event_handler(bsp_event_t event) {
 	uint32_t err_code;

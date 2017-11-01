@@ -410,6 +410,14 @@ static void get_mac(uint8_t *p_data, uint16_t length) {
 
 }
 
+/********************
+*打开电池测量的开关
+*********************/
+static void open_battery_source(void) {
+	nrf_gpio_pin_set(BATTERY_LEVEL_EN);
+
+}
+
 /***************************************************
 *获取电池电量，大致1~~~0.1V
 ****************************************************/
@@ -417,7 +425,7 @@ static void get_battery_level(uint8_t *p_data, uint16_t length) {
 	uint8_t tmp;
 
 	//1、开启电源使能
-	nrf_gpio_pin_set(BATTERY_LEVEL_EN);
+	open_battery_source();
 	//2、开启AD采集
 	saadc_sampling_event_enable();
 	nrf_delay_ms(1000);
@@ -788,7 +796,19 @@ exe_delete_fig:
 static int get_fig_info(uint8_t *p_data, uint16_t length) {
 	uint8_t end_reply[4] = {0, 0, 0, 0};
 
-	//1、获取flash中的指纹信息
+
+	//1、获取指纹模块的信息列表
+	//1、1.设置指令码为GR_FIG_CMD_RDINDEXTB
+	fig_cmd_code = GR_FIG_CMD_RDINDEXTB;
+	ble_operate_code = p_data[0];
+	//1、2.打开指纹模块
+	open_fig();
+	//1、3.发送获取指纹模快索引表命令
+	r301t_send_get_indextbx_cmd[1] = 0;
+	fig_r301t_send_cmd(0x01, sizeof(r301t_send_get_indextbx_cmd), \
+	                   r301t_send_get_indextbx_cmd);
+	/*
+	//3、获取flash中的指纹信息
 	for(int i = 0; i < FIG_INFO_NUMBER; i++) {
 		//1.1、获取内部flash存储区的信息
 		pstorage_block_identifier_get(&block_id_flash_store, \
@@ -807,8 +827,9 @@ static int get_fig_info(uint8_t *p_data, uint16_t length) {
 			ble_nus_string_send(&m_nus, nus_data_send, nus_data_send_length);
 		}
 	}
-	//2、结束包
+	//4、结束包
 	ble_reply(p_data[0], end_reply, sizeof(end_reply));
+	*/
 }
 
 /***********************
@@ -908,10 +929,10 @@ void close_fig(void) {
 	nrf_gpio_cfg_output(BATTERY_LEVEL_EN);
 	nrf_gpio_pin_clear(BATTERY_LEVEL_EN);
 	//设置uart的引脚
-/*	nrf_gpio_cfg_output(RX_PIN_NUMBER);
-	nrf_gpio_pin_clear(RX_PIN_NUMBER);
-	nrf_gpio_cfg_output(TX_PIN_NUMBER);
-	nrf_gpio_pin_clear(TX_PIN_NUMBER);*/
+	/*	nrf_gpio_cfg_output(RX_PIN_NUMBER);
+		nrf_gpio_pin_clear(RX_PIN_NUMBER);
+		nrf_gpio_cfg_output(TX_PIN_NUMBER);
+		nrf_gpio_pin_clear(TX_PIN_NUMBER);*/
 
 }
 
@@ -1178,19 +1199,19 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 			                    strlen(checked_superkey_false) );
 		}
 		break;
-	case GET_FIG_INDEXTABLE://获取指纹的索引码
-		if(length == 2){
-			if(is_superkey_checked == true ) { //如果验证了超级密码
-				is_ble_cmd_exe = true;
-				get_fig_indextable(p_data, length);
-				is_ble_cmd_exe = false;
-			} else {
-			//向手机发送失败信息"skey check fail"
-			ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
-			                    strlen(checked_superkey_false) );
-			}
-		}
-		break;
+		/*	case GET_FIG_INDEXTABLE://获取指纹的索引码
+				if(length == 2){
+					if(is_superkey_checked == true ) { //如果验证了超级密码
+						is_ble_cmd_exe = true;
+						get_fig_indextable(p_data, length);
+						is_ble_cmd_exe = false;
+					} else {
+					//向手机发送失败信息"skey check fail"
+					ble_nus_string_send(&m_nus, (uint8_t *)checked_superkey_false, \
+					                    strlen(checked_superkey_false) );
+					}
+				}
+				break;*/
 
 	case 0x1B://指纹模块fm260b指令，长度为8，直接通过串口发送给模块
 		if(length == 8) { //长度为8
