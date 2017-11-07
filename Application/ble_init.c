@@ -462,7 +462,6 @@ void uart_init(void) {
 void advertising_init(void) {
 	uint32_t      err_code;
 	ble_advdata_t advdata;
-	ble_advdata_t scanrsp;
 	ble_advdata_manuf_data_t manuf_data; //自定义厂商数据，这里为mac
 
 	uint8_t device_hard_info = BIT_TOUCH | BIT_FIG;
@@ -487,21 +486,22 @@ void advertising_init(void) {
 	advdata.include_appearance = false;
 	//  advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE;
 	advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
+//	advdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);  
+//    advdata.uuids_complete.p_uuids  = m_adv_uuids;
 	advdata.p_manuf_specific_data = &manuf_data;
 
+	 ble_adv_modes_config_t options =  
+    {  
+        BLE_ADV_WHITELIST_DISABLED,  
+        BLE_ADV_DIRECTED_DISABLED,  
+        BLE_ADV_DIRECTED_SLOW_DISABLED, 0,0,  
+        BLE_ADV_FAST_ENABLED, APP_ADV_FAST_INTERVAL, APP_ADV_FAST_TIMEOUT_IN_SECONDS,  
+        BLE_ADV_SLOW_ENABLED, APP_ADV_SLOW_INTERVAL, APP_ADV_SLOW_TIMEOUT_IN_SECONDS
+    };  
 
-	memset(&scanrsp, 0, sizeof(scanrsp));
-	scanrsp.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
-	scanrsp.uuids_complete.p_uuids  = m_adv_uuids;
-//	scanrsp.p_manuf_specific_data = &manuf_data;
 
-	ble_adv_modes_config_t options = {0};
-	options.ble_adv_fast_enabled  = BLE_ADV_FAST_ENABLED;
-	options.ble_adv_fast_interval = APP_ADV_INTERVAL;
-	options.ble_adv_fast_timeout  = APP_ADV_TIMEOUT_IN_SECONDS;
-//	options.ble_adv_fast_timeout  = 0;
 
-	err_code = ble_advertising_init(&advdata, &scanrsp, &options, on_adv_evt, NULL);
+	err_code = ble_advertising_init(&advdata, NULL, &options, on_adv_evt, NULL);
 	APP_ERROR_CHECK(err_code);
 //	err_code = ble_advdata_set(&advdata,NULL);
 //    APP_ERROR_CHECK(err_code);
@@ -523,8 +523,8 @@ void adverts_start(void) {
 	adv_params.type        = BLE_GAP_ADV_TYPE_ADV_IND;
 	adv_params.p_peer_addr = NULL;
 	adv_params.fp          = BLE_GAP_ADV_FP_ANY;
-	adv_params.interval    = APP_ADV_INTERVAL;
-	adv_params.timeout     = APP_ADV_TIMEOUT_IN_SECONDS;
+	adv_params.interval    = APP_ADV_FAST_INTERVAL;
+	adv_params.timeout     = APP_ADV_FAST_TIMEOUT_IN_SECONDS;
 	adv_params.p_whitelist = NULL;
 
 	err_code = sd_ble_gap_adv_start(&adv_params);

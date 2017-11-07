@@ -10,7 +10,7 @@
 #include "moto.h"
 
 pstorage_handle_t block_id_params;
-uint8_t flash_store_params[8];
+uint8_t flash_store_params[PARAMS_LEN + 1];
 
 //对比动态密码的变量
 uint8_t SM4_challenge[4] = {0x31,0x30,0x33,0x36};
@@ -28,6 +28,7 @@ uint8_t 	BEEP_DIDI_NUMBER;
 uint8_t		VOL_VALUE;	//实际值<<4位
 uint8_t		KEY_INPUT_USE_TIME;
 uint8_t		MOTO_DIR;
+uint8_t		TOUCH_DELAY;//按键的延迟
 
 
 //与设置mac有关的变量
@@ -53,7 +54,7 @@ void set_default_params(void) {
 	err_code = pstorage_block_identifier_get(&block_id_flash_store, \
 	           (pstorage_size_t)DEFAULT_PARAMS_OFFSET, &block_id_params);
 	APP_ERROR_CHECK(err_code);
-	pstorage_load(flash_store_params, &block_id_params, 8, 0);
+	pstorage_load(flash_store_params, &block_id_params, 16, 0);
 	if(flash_store_params[0] == 'w') {
 		OPEN_TIME = flash_store_params[1];//电机转动时间
 		DOOR_OPEN_HOLD_TIME = flash_store_params[2];//开门保持时间
@@ -61,13 +62,15 @@ void set_default_params(void) {
 		VOL_VALUE = flash_store_params[4];//电池电压报警
 		KEY_INPUT_USE_TIME = flash_store_params[5];//键盘密码输入密码有效时间，以10min为单位
 		MOTO_DIR = flash_store_params[6];//电机的方向
+		TOUCH_DELAY = flash_store_params[7];//按键的延迟
 	} else {
 		OPEN_TIME = 0x03;//电机转动时间
 		DOOR_OPEN_HOLD_TIME = 0x32;//开门保持时间 50*0.1s=5s
 		BEEP_DIDI_NUMBER = 0x05;//蜂鸣器响次数
 		VOL_VALUE = 0x2C;//电池电压报警,左移4位，大致是5.0V(设定的欠压值)
 		KEY_INPUT_USE_TIME = 0x05;//键盘密码输入密码有效时间，以10min为单位
-		MOTO_DIR = 0;
+		MOTO_DIR = 0;//电机方向
+		TOUCH_DELAY = 10;
 	}
 
 #if defined(BLE_DOOR_DEBUG)

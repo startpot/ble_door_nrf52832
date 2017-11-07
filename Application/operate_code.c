@@ -308,6 +308,8 @@ static void set_param(uint8_t *p_data, uint16_t length) {
 	KEY_CHECK_NUMBER = p_data[5];
 	//电机的转动方向
 	MOTO_DIR = p_data[6];
+	//按键延迟
+	TOUCH_DELAY = p_data[7];
 
 	memset(flash_write_data, 0, BLOCK_STORE_SIZE);
 	//写入标记'w'
@@ -944,16 +946,7 @@ void close_fig(void) {
 void operate_code_check(uint8_t *p_data, uint16_t length) {
 	static char checked_superkey_false[16] = "skey check fail";
 	switch(p_data[0]) {
-	case '0'://设置开锁秘钥
-	case '1':
-	case '2':
-	case '3':
-	case '4':
-	case '5':
-	case '6':
-	case '7':
-	case '8':
-	case '9':
+	case '0'...'9'://设置开锁秘钥
 		if(length ==0x06) { //6字节
 			is_ble_cmd_exe = true;
 			sm4_key_check_open(p_data, length);
@@ -1018,7 +1011,7 @@ void operate_code_check(uint8_t *p_data, uint16_t length) {
 		break;
 
 	case SET_PARAMS://设置参量
-		if(length == 0x7) { //6字节
+		if(length == PARAMS_LEN + 1) { //6字节
 			if(is_superkey_checked == true) { //如果验证了超级密码
 				is_ble_cmd_exe = true;
 				set_param(p_data, length);

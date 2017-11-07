@@ -8,6 +8,8 @@
 #include "ble_gap.h"
 
 #define SET_KEY_CHECK_NUMBER		3
+#define	PARAMS_LEN					7
+
 
 //与动态口令相关的参量
 #define SM4_INTERVAL		60
@@ -18,7 +20,7 @@ extern uint8_t key_store_tmp[6];
 extern uint8_t seed[16];
 
 extern pstorage_handle_t block_id_params;
-extern uint8_t flash_store_params[8];
+extern uint8_t flash_store_params[PARAMS_LEN + 1];
 
 extern uint8_t	KEY_CHECK_NUMBER;
 extern uint8_t 	LED_LIGHT_TIME;
@@ -29,6 +31,7 @@ extern uint8_t 	BEEP_DIDI_NUMBER;
 extern uint8_t	VOL_VALUE;
 extern uint8_t	KEY_INPUT_USE_TIME;
 extern uint8_t	MOTO_DIR;
+extern uint8_t	TOUCH_DELAY;
 
 extern ble_gap_addr_t addr;
 

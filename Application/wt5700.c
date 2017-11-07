@@ -94,7 +94,7 @@ void wt5700_init(void) {
 	wt5700_i2c_write_byte(WT5700_SYS_CTL, set_data);
 
 	//将芯片设置成单触摸模式,1/2win sense
-	set_data = 0x02; //c2
+	set_data = 0xc2; //c2
 	wt5700_i2c_write_byte(WT5700_SYS_CTL02, set_data);
 
 	//

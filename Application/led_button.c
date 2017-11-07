@@ -401,6 +401,10 @@ static void check_key_express(char express_value) {
 			//	leds_on(board_leds[i], LED_LIGHT_TIME);
 			//蜂鸣器响1声
 			beep_didi(1);
+			//3、闪一下背光
+		//	nrf_gpio_pin_clear( BATTERY_LEVEL_EN );
+			nrf_delay_ms(TOUCH_DELAY*10);
+		//	nrf_gpio_pin_set( BATTERY_LEVEL_EN );
 			write_key_expressed();
 		}
 	}
@@ -467,6 +471,7 @@ static void touch_finger_int_handler(uint32_t event_pins_low_to_high, uint32_t e
 		if(key_express_value != 0) {
 			check_key_express(key_express_value);
 		}
+		
 	}
 	//指纹中断响应
 	if (event_pins_high_to_low & (1 << FIG_WAKE_N_PIN)) {
